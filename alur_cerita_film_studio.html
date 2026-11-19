@@ -6,7 +6,9 @@
     <title>CineRecap AI — Studio Alur Cerita Film Anti-Copyright</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- MP4 Muxer for high-performance in-browser MP4 export -->
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -258,9 +260,9 @@
                                     <span><i class="fa-solid fa-circle-check mr-1"></i> Video Anti-Copyright Siap!</span>
                                     <span id="clipSummaryBadge" class="text-zinc-400"></span>
                                 </div>
-                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.webm" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
-                                    <i class="fa-solid fa-download"></i>
-                                    <span>Download Video Hasil Potongan (Siap CapCut)</span>
+                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.mp4" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
+                                    <i class="fa-solid fa-file-video text-sm"></i>
+                                    <span>Download Video Hasil Potongan (MP4 Siap CapCut)</span>
                                 </a>
                             </div>
                         </div>
@@ -728,7 +730,8 @@
                 // Ukuran optimal agar tajam untuk AI Vision & ringan dirender
                 const targetW = 640;
                 const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
-                const targetH = Math.round(targetW * aspect);
+                let targetH = Math.round(targetW * aspect);
+                if (targetH % 2 !== 0) targetH += 1;
                 canvas.width = targetW;
                 canvas.height = targetH;
 
@@ -787,7 +790,7 @@
                 }
 
                 // 2. Render Video Hasil Potongan Anti-Copyright (Dari urutan klip yang telah dipotong & di-remix)
-                progressLabel.textContent = "Merender video hasil potongan Anti-Copyright...";
+                progressLabel.textContent = "Merender video hasil potongan Anti-Copyright (MP4 Siap CapCut)...";
                 await buildAntiCopyrightVideoClip(appState.extractedFrames, canvas, ctx, optCut3s, (p) => {
                     const totalPct = 65 + Math.round(p * 35);
                     progressBar.style.width = `${totalPct}%`;
@@ -815,95 +818,249 @@
             }
         }
 
-        // Merender urutan klip potongan 3-detik + micro replay efek menjadi file video siap download
+                // Mendapatkan konfigurasi H.264 VideoEncoder yang didukung oleh GPU/hardware browser
+        async function getSupportedVideoEncoderConfig(width, height, fps = 24) {
+            const candidateCodecs = [
+                'avc1.42001f', // H.264 Baseline Profile Level 3.1 (Kompatibilitas tertinggi)
+                'avc1.4d002a', // H.264 Main Profile Level 4.2
+                'avc1.64002a', // H.264 High Profile Level 4.2
+                'avc1.42E01E'  // H.264 Constrained Baseline
+            ];
+            for (const codec of candidateCodecs) {
+                try {
+                    const config = {
+                        codec,
+                        width,
+                        height,
+                        bitrate: 2_500_000,
+                        framerate: fps
+                    };
+                    const check = await VideoEncoder.isConfigSupported(config);
+                    if (check && check.supported) {
+                        return config;
+                    }
+                } catch (e) {
+                    // Coba profil berikutnya
+                }
+            }
+            return {
+                codec: 'avc1.42001f',
+                width,
+                height,
+                bitrate: 2_500_000,
+                framerate: fps
+            };
+        }
+
+        // Merender urutan klip potongan 3-detik + micro replay efek menjadi file video MP4 asli siap download
         async function buildAntiCopyrightVideoClip(frames, canvas, ctx, enableReplayEffect, onProgress) {
-            return new Promise((resolve) => {
-                // Susun urutan klip: tiap adegan durasi ~2.8 detik, dan setiap klip ke-3 diberi efek micro-replay (ulang cepat 0.8 detik) khas alur cerita anti-copyright
-                const timelineSequence = [];
-                frames.forEach((frame, idx) => {
-                    timelineSequence.push({ frame, durationMs: 2600, label: `Klip ${idx + 1}` });
-                    if (enableReplayEffect && idx > 0 && idx % 3 === 0) {
-                        // Sisipkan pengulangan singkat (replay hook) untuk memutus pola sidik jari video asli
-                        timelineSequence.push({ frame, durationMs: 900, label: `Replay ${idx + 1}`, isReplay: true });
-                    }
-                });
+            // Pastikan dimensi canvas genap untuk kepatuhan codec H.264 MP4
+            if (canvas.width % 2 !== 0) canvas.width += 1;
+            if (canvas.height % 2 !== 0) canvas.height += 1;
+            const width = canvas.width;
+            const height = canvas.height;
 
-                // Jika MediaRecorder didukung browser, rekam stream canvas menjadi video
-                if (typeof MediaRecorder !== "undefined" && canvas.captureStream) {
-                    const stream = canvas.captureStream(24);
-                    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-                        ? "video/webm;codecs=vp9"
-                        : "video/webm";
-                    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2000000 });
-                    const chunks = [];
+            // 1. Susun urutan klip: tiap adegan durasi ~2.5 detik, dan setiap klip ke-3 diberi micro-replay hook
+            const timelineSequence = [];
+            frames.forEach((frame, idx) => {
+                timelineSequence.push({ frame, durationMs: 2500, label: `Klip ${idx + 1}` });
+                if (enableReplayEffect && idx > 0 && idx % 3 === 0) {
+                    timelineSequence.push({ frame, durationMs: 900, label: `Replay ${idx + 1}`, isReplay: true });
+                }
+            });
 
-                    recorder.ondataavailable = (e) => {
-                        if (e.data && e.data.size > 0) chunks.push(e.data);
-                    };
-
-                    recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: "video/webm" });
-                        if (appState.processedVideoUrl) URL.revokeObjectURL(appState.processedVideoUrl);
-                        appState.processedVideoUrl = URL.createObjectURL(blob);
-
-                        const dlBtn = document.getElementById("downloadProcessedVideoBtn");
-                        dlBtn.href = appState.processedVideoUrl;
-                        document.getElementById("clipSummaryBadge").textContent = `${timelineSequence.length} Potongan Klip`;
-                        document.getElementById("processedVideoResult").classList.remove("hidden");
-                        resolve();
-                    };
-
-                    recorder.start();
-
-                    let seqIndex = 0;
-                    const img = new Image();
-
-                    function drawNextSegment() {
-                        if (seqIndex >= timelineSequence.length) {
-                            recorder.stop();
-                            return;
-                        }
-
-                        const item = timelineSequence[seqIndex];
-                        img.onload = () => {
-                            let startTime = performance.now();
-                            // Durasi render dipercepat agar user tidak menunggu lama, namun tetap menghasilkan segmen video utuh
-                            const renderDuration = Math.min(450, item.durationMs / 4);
-
-                            function animateKenBurns(now) {
-                                const elapsed = now - startTime;
-                                const progress = Math.min(1, elapsed / renderDuration);
-                                // Efek gerakan kamera halus (Ken Burns micro-pan) agar lolos Content ID
-                                const scale = item.isReplay ? 1.12 - (progress * 0.05) : 1.02 + (progress * 0.05);
-                                const w = canvas.width * scale;
-                                const h = canvas.height * scale;
-                                const x = (canvas.width - w) / 2;
-                                const y = (canvas.height - h) / 2;
-
-                                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                                ctx.drawImage(img, x, y, w, h);
-
-                                if (progress < 1) {
-                                    requestAnimationFrame(animateKenBurns);
-                                } else {
-                                    seqIndex++;
-                                    onProgress(seqIndex / timelineSequence.length);
-                                    drawNextSegment();
-                                }
-                            }
-                            requestAnimationFrame(animateKenBurns);
-                        };
+            // 2. Pre-load semua elemen image secara paralel
+            const loadedImages = await Promise.all(
+                timelineSequence.map(item => {
+                    return new Promise((res) => {
+                        const img = new Image();
+                        img.onload = () => res(img);
+                        img.onerror = () => res(null);
                         img.src = item.frame.dataUrl;
+                    });
+                })
+            );
+
+            // METODE UTAMA: WebCodecs + Mp4Muxer (Menghasilkan MP4 asli AVC/H.264 dengan akselerasi GPU)
+            const canUseWebCodecs = typeof VideoEncoder !== "undefined" && typeof Mp4Muxer !== "undefined";
+            if (canUseWebCodecs) {
+                try {
+                    const fps = 24;
+                    const frameDurationUs = Math.round(1_000_000 / fps);
+
+                    const muxer = new Mp4Muxer.Muxer({
+                        target: new Mp4Muxer.ArrayBufferTarget(),
+                        video: {
+                            codec: 'avc',
+                            width: width,
+                            height: height
+                        },
+                        fastStart: 'in-memory',
+                        firstTimestampBehavior: 'offset'
+                    });
+
+                    const encoderConfig = await getSupportedVideoEncoderConfig(width, height, fps);
+                    let encoderError = null;
+
+                    const videoEncoder = new VideoEncoder({
+                        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+                        error: (e) => {
+                            console.error("VideoEncoder error:", e);
+                            encoderError = e;
+                        }
+                    });
+
+                    videoEncoder.configure(encoderConfig);
+
+                    let currentTimestampUs = 0;
+                    let totalFramesEncoded = 0;
+
+                    // Hitung estimasi frame untuk progress bar
+                    const clipFrameCounts = timelineSequence.map(item => Math.max(1, Math.round((item.durationMs / 1000) * fps)));
+                    const totalExpectedFrames = clipFrameCounts.reduce((a, b) => a + b, 0);
+
+                    for (let seqIdx = 0; seqIdx < timelineSequence.length; seqIdx++) {
+                        if (encoderError) throw encoderError;
+                        const item = timelineSequence[seqIdx];
+                        const img = loadedImages[seqIdx];
+                        const numFrames = clipFrameCounts[seqIdx];
+
+                        for (let f = 0; f < numFrames; f++) {
+                            const progress = numFrames > 1 ? f / (numFrames - 1) : 0;
+                            // Efek gerakan kamera halus (Ken Burns micro-motion) agar memutus sidik jari statis / lolos Content ID
+                            const scale = item.isReplay ? 1.12 - (progress * 0.05) : 1.02 + (progress * 0.05);
+                            const w = width * scale;
+                            const h = height * scale;
+                            const x = (width - w) / 2;
+                            const y = (height - h) / 2;
+
+                            ctx.clearRect(0, 0, width, height);
+                            if (img) ctx.drawImage(img, x, y, w, h);
+
+                            const isKeyFrame = (f === 0) || (totalFramesEncoded % 48 === 0);
+                            const videoFrame = new VideoFrame(canvas, {
+                                timestamp: currentTimestampUs,
+                                duration: frameDurationUs
+                            });
+
+                            videoEncoder.encode(videoFrame, { keyFrame: isKeyFrame });
+                            videoFrame.close();
+
+                            currentTimestampUs += frameDurationUs;
+                            totalFramesEncoded++;
+
+                            if (totalFramesEncoded % 8 === 0) {
+                                if (onProgress) onProgress(totalFramesEncoded / totalExpectedFrames);
+                                await new Promise(r => setTimeout(r, 0));
+                            }
+                        }
                     }
 
-                    drawNextSegment();
-                } else {
-                    // Fallback jika browser tidak mendukung MediaRecorder
+                    await videoEncoder.flush();
+                    videoEncoder.close();
+                    muxer.finalize();
+
+                    const { buffer } = muxer.target;
+                    const mp4Blob = new Blob([buffer], { type: "video/mp4" });
+
+                    if (appState.processedVideoUrl) URL.revokeObjectURL(appState.processedVideoUrl);
+                    appState.processedVideoUrl = URL.createObjectURL(mp4Blob);
+
+                    const dlBtn = document.getElementById("downloadProcessedVideoBtn");
+                    dlBtn.href = appState.processedVideoUrl;
+                    dlBtn.download = "alur-cerita-anticopyright.mp4";
+
+                    document.getElementById("clipSummaryBadge").textContent = `${timelineSequence.length} Potongan Klip (MP4)`;
+                    document.getElementById("processedVideoResult").classList.remove("hidden");
+                    if (onProgress) onProgress(1);
+                    return;
+                } catch (err) {
+                    console.warn("WebCodecs gagal, beralih ke fallback MediaRecorder:", err);
+                }
+            }
+
+            // METODE FALLBACK: MediaRecorder (Universal browser fallback)
+            return new Promise((resolve) => {
+                if (typeof MediaRecorder === "undefined" || !canvas.captureStream) {
                     document.getElementById("clipSummaryBadge").textContent = `${timelineSequence.length} Potongan Siap`;
                     document.getElementById("processedVideoResult").classList.remove("hidden");
-                    onProgress(1);
+                    if (onProgress) onProgress(1);
                     resolve();
+                    return;
                 }
+
+                const stream = canvas.captureStream(24);
+                let mimeType = "video/webm";
+                let fileExt = "webm";
+
+                if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")) {
+                    mimeType = "video/mp4;codecs=avc1";
+                    fileExt = "mp4";
+                } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+                    mimeType = "video/mp4";
+                    fileExt = "mp4";
+                } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+                    mimeType = "video/webm;codecs=vp9";
+                }
+
+                const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+                const chunks = [];
+
+                recorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) chunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: mimeType });
+                    if (appState.processedVideoUrl) URL.revokeObjectURL(appState.processedVideoUrl);
+                    appState.processedVideoUrl = URL.createObjectURL(blob);
+
+                    const dlBtn = document.getElementById("downloadProcessedVideoBtn");
+                    dlBtn.href = appState.processedVideoUrl;
+                    dlBtn.download = `alur-cerita-anticopyright.${fileExt}`;
+                    document.getElementById("clipSummaryBadge").textContent = `${timelineSequence.length} Potongan Klip (${fileExt.toUpperCase()})`;
+                    document.getElementById("processedVideoResult").classList.remove("hidden");
+                    resolve();
+                };
+
+                recorder.start();
+
+                let seqIndex = 0;
+                function drawNextSegment() {
+                    if (seqIndex >= timelineSequence.length) {
+                        recorder.stop();
+                        return;
+                    }
+
+                    const item = timelineSequence[seqIndex];
+                    const img = loadedImages[seqIndex];
+                    let startTime = performance.now();
+                    const renderDuration = Math.min(500, item.durationMs / 4);
+
+                    function animateKenBurns(now) {
+                        const elapsed = now - startTime;
+                        const progress = Math.min(1, elapsed / renderDuration);
+                        const scale = item.isReplay ? 1.12 - (progress * 0.05) : 1.02 + (progress * 0.05);
+                        const w = width * scale;
+                        const h = height * scale;
+                        const x = (width - w) / 2;
+                        const y = (height - h) / 2;
+
+                        ctx.clearRect(0, 0, width, height);
+                        if (img) ctx.drawImage(img, x, y, w, h);
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animateKenBurns);
+                        } else {
+                            seqIndex++;
+                            if (onProgress) onProgress(seqIndex / timelineSequence.length);
+                            drawNextSegment();
+                        }
+                    }
+                    requestAnimationFrame(animateKenBurns);
+                }
+
+                drawNextSegment();
             });
         }
 
