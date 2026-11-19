@@ -464,8 +464,10 @@
         // ==========================================
         // API Key tertanam permanen untuk deployment Vercel / self-hosting
         const apiKey = "AQ.Ab8RN6KO3N_Fr0l9wUOsplkE6xJzuxljg5nosu6pkmsQxoQOZg";
-        const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
-        const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
+        const GEMINI_TEXT_MODEL = "gemini-3.8-flash";
+        const GEMINI_TTS_MODEL = "gemini-3.8-flash-tts";
+        const CANDIDATE_TEXT_MODELS = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
+        const CANDIDATE_TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts", "gemini-2.0-flash"];
 
         let appState = {
             videoFile: null,
@@ -1309,7 +1311,6 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     });
                 });
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TEXT_MODEL}:generateContent?key=${getActiveApiKey()}`;
                 const payload = {
                     contents: [{ role: "user", parts }],
                     generationConfig: {
@@ -1340,11 +1341,29 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     }
                 };
 
-                const result = await fetchWithRetry(apiUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
+                let result = null;
+                let lastError = null;
+
+                // Coba model kandidat secara berurutan (gemini-3.8-flash -> fallback)
+                for (const modelName of CANDIDATE_TEXT_MODELS) {
+                    try {
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${getActiveApiKey()}`;
+                        result = await fetchWithRetry(apiUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                        if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                            console.log(`Berhasil menggunakan model: ${modelName}`);
+                            break;
+                        }
+                    } catch (mErr) {
+                        console.warn(`Model ${modelName} gagal: ${mErr.message}, mencoba model alternatif...`);
+                        lastError = mErr;
+                    }
+                }
+
+                if (!result && lastError) throw lastError;
 
                 const rawJson = result?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!rawJson) throw new Error("Respons AI kosong.");
@@ -1494,26 +1513,41 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     }
 
                     const promptText = `${tonePrompts[styleValue] || "Bacakan dengan gaya narator film:"}\n\n${chunkText}`;
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${getActiveApiKey()}`;
+                    
+                    let result = null;
+                    let lastTtsErr = null;
 
-                    const payload = {
-                        contents: [{ parts: [{ text: promptText }] }],
-                        generationConfig: {
-                            responseModalities: ["AUDIO"],
-                            speechConfig: {
-                                voiceConfig: {
-                                    prebuiltVoiceConfig: { voiceName: voiceName }
-                                }
+                    for (const ttsModel of CANDIDATE_TTS_MODELS) {
+                        try {
+                            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${getActiveApiKey()}`;
+                            const payload = {
+                                contents: [{ parts: [{ text: promptText }] }],
+                                generationConfig: {
+                                    responseModalities: ["AUDIO"],
+                                    speechConfig: {
+                                        voiceConfig: {
+                                            prebuiltVoiceConfig: { voiceName: voiceName }
+                                        }
+                                    }
+                                },
+                                model: ttsModel
+                            };
+
+                            result = await fetchWithRetry(apiUrl, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(payload)
+                            });
+                            if (result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+                                break;
                             }
-                        },
-                        model: GEMINI_TTS_MODEL
-                    };
+                        } catch (tErr) {
+                            console.warn(`TTS Model ${ttsModel} gagal, mencoba alternatif...`, tErr);
+                            lastTtsErr = tErr;
+                        }
+                    }
 
-                    const result = await fetchWithRetry(apiUrl, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
+                    if (!result && lastTtsErr) throw lastTtsErr;
 
                     const part = result?.candidates?.[0]?.content?.parts?.[0];
                     const audioData = part?.inlineData?.data;
