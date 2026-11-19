@@ -215,11 +215,31 @@
                             </div>
                         </div>
 
-                        <!-- Pengaturan Anti-Copyright -->
+                        <!-- Pengaturan Anti-Copyright & Target Durasi -->
                         <div class="bg-studio-950/90 rounded-xl p-4 border border-zinc-800">
                             <div class="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-3 flex items-center justify-between">
                                 <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-1.5"></i> Mode Anti-Copyright YouTube</span>
-                                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Auto-Bypass</span>
+                                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-semibold">Auto-Bypass</span>
+                            </div>
+
+                            <!-- Pilihan Target Durasi YouTube Alur Cerita -->
+                            <div class="mb-3.5 pb-3 border-b border-zinc-800/80">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label for="targetDurationSelect" class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-clock text-amber-400"></i> Target Durasi Video Alur Cerita:
+                                    </label>
+                                    <span class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-bold">4.000 Jam Tayang</span>
+                                </div>
+                                <select id="targetDurationSelect" onchange="updateDurationTargetUI()" class="w-full bg-zinc-900 border border-zinc-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs text-zinc-100 outline-none transition font-medium">
+                                    <option value="20" selected>🌟 YouTube Monetisasi (18 - 22 Menit) — [Rekomendasi 4.000 Jam Tayang]</option>
+                                    <option value="15">⏱️ YouTube Standar (12 - 15 Menit)</option>
+                                    <option value="10">⚡ YouTube Ringkas (8 - 10 Menit)</option>
+                                    <option value="3">🚀 Teaser / Shorts Preview (2 - 3 Menit)</option>
+                                </select>
+                                <div id="targetDurationBadgeDesc" class="mt-2 p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 text-[11px] text-zinc-400 flex items-start gap-2">
+                                    <i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i>
+                                    <span>Target <strong>~20 Menit</strong>: Video dipotong mencakup seluruh alur film (~36 adegan utama), menghasilkan file MP4 siap edit di CapCut, dan naskah alur cerita lengkap ~2.500 kata untuk jam tayang YouTube.</span>
+                                </div>
                             </div>
 
                             <div class="space-y-2.5 text-xs text-zinc-300">
@@ -252,6 +272,11 @@
                                 <div class="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
                                     <div id="videoProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-200" style="width: 0%"></div>
                                 </div>
+                                <!-- Tombol Selesai & Finalisasi Lebih Awal -->
+                                <button id="stopEarlyBtn" onclick="stopProcessAndFinalize()" class="hidden mt-2.5 w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <span>Selesai Lebih Awal & Download Durasi Saat Ini</span>
+                                </button>
                             </div>
 
                             <!-- Hasil Download Video Anti-Copyright -->
@@ -450,7 +475,8 @@
             processedVideoUrl: null,
             generatedScriptText: "",
             sceneBreakdowns: [],
-            audioBlobUrl: null
+            audioBlobUrl: null,
+            stopRequested: false
         };
 
         // Ambil API Key aktif (prioritas: localStorage user -> konstanta kode jika valid AIzaSy)
@@ -707,7 +733,7 @@
                         codec,
                         width,
                         height,
-                        bitrate: 2_500_000,
+                        bitrate: 1800000,
                         framerate: fps
                     };
                     const check = await VideoEncoder.isConfigSupported(config);
@@ -722,7 +748,7 @@
                 codec: 'avc1.42001f',
                 width,
                 height,
-                bitrate: 2_500_000,
+                bitrate: 1800000,
                 framerate: fps
             };
         }
@@ -747,7 +773,34 @@
             return new Promise((res) => requestAnimationFrame(res));
         }
 
-        // FUNGSI UTAMA: Memotong video asli menjadi klip-klip bergerak murni + Anti-Copyright filter & export ke MP4
+        // Update keterangan UI target durasi
+        function updateDurationTargetUI() {
+            const val = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
+            const desc = document.getElementById("targetDurationBadgeDesc");
+            if (!desc) return;
+            if (val >= 20) {
+                desc.innerHTML = `<i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i> <span>Target <strong>~20 Menit</strong>: Video dipotong mencakup seluruh alur film (~36 adegan utama), menghasilkan file MP4 ~150-250MB, dan naskah alur cerita lengkap ~2.500 kata untuk monetisasi YouTube 4.000 jam tayang.</span>`;
+            } else if (val >= 15) {
+                desc.innerHTML = `<i class="fa-solid fa-circle-info text-indigo-400 mt-0.5"></i> <span>Target <strong>~15 Menit</strong>: Video dipotong mencakup ~30 adegan kunci, file MP4 ~100-150MB, dan naskah narasi lengkap ~1.800 kata.</span>`;
+            } else if (val >= 10) {
+                desc.innerHTML = `<i class="fa-solid fa-circle-info text-indigo-400 mt-0.5"></i> <span>Target <strong>~10 Menit</strong>: Video dipotong mencakup ~24 adegan kunci, file MP4 ~70-100MB, dan naskah narasi ~1.250 kata.</span>`;
+            } else {
+                desc.innerHTML = `<i class="fa-solid fa-circle-info text-emerald-400 mt-0.5"></i> <span>Target <strong>~2-3 Menit</strong>: Video teaser/Shorts dipotong cepat (~16 klip), file MP4 ~15-25MB, dan naskah narasi ringkas ~350 kata.</span>`;
+            }
+        }
+
+        // Hentikan proses lebih awal dan simpan semua potongan yang sudah terekam ke MP4
+        function stopProcessAndFinalize() {
+            appState.stopRequested = true;
+            const btn = document.getElementById("stopEarlyBtn");
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyelesaikan & menyimpan MP4...`;
+            }
+            showToast("Menyimpan semua potongan video yang sudah terekam ke format MP4...", "info");
+        }
+
+        // FUNGSI UTAMA: Memotong video asli menjadi klip-klip bergerak murni berdurasi panjang (Target 20 Menit YouTube)
         async function startAntiCopyrightProcess() {
             if (!appState.videoUrl) {
                 showToast("Upload dulu video MP4-nya bro!", "warning");
@@ -759,17 +812,28 @@
             const progressBar = document.getElementById("videoProgressBar");
             const progressPct = document.getElementById("videoProgressPct");
             const progressLabel = document.getElementById("videoProgressLabel");
+            const stopBtn = document.getElementById("stopEarlyBtn");
 
             btn.disabled = true;
             btn.classList.add("opacity-60", "cursor-not-allowed");
             progressWrap.classList.remove("hidden");
             progressBar.style.width = "0%";
             progressPct.textContent = "0%";
-            updateStatusBadge("Merekam Klip Bergerak Asli...", "indigo");
+            if (stopBtn) {
+                stopBtn.classList.remove("hidden");
+                stopBtn.disabled = false;
+                stopBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>Selesai Lebih Awal & Download Durasi Saat Ini</span>`;
+            }
+
+            appState.stopRequested = false;
+            updateStatusBadge("Merekam Alur Cerita YouTube...", "indigo");
 
             const optCut3s = document.getElementById("optCut3s").checked;
             const optZoom = document.getElementById("optZoom").checked;
             const optColorSpeed = document.getElementById("optColorSpeed").checked;
+
+            const targetMinutes = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
+            let targetTotalSeconds = targetMinutes * 60; // 1,200 detik untuk 20 menit
 
             let hiddenVid = null;
             try {
@@ -804,27 +868,36 @@
                 canvas.width = targetW;
                 canvas.height = targetH;
 
-                const duration = hiddenVid.duration;
+                const filmDuration = hiddenVid.duration;
 
-                // Tentukan jumlah klip adegan yang proporsional sesuai durasi video film
-                let totalTargetClips = 16;
-                let clipDurationSec = 2.4; // Durasi potong 2.4 detik per adegan (standar alur cerita anti-copyright)
-
-                if (duration < 12) {
-                    totalTargetClips = Math.max(1, Math.floor(duration / 2.5));
-                    clipDurationSec = Math.max(1.0, duration / totalTargetClips - 0.2);
-                } else if (duration < 45) {
-                    totalTargetClips = Math.max(2, Math.floor(duration / 3));
-                    clipDurationSec = 2.0;
+                // Hitung jumlah adegan kunci dan durasi per adegan sesuai target menit
+                let numScenes = 36;
+                if (targetMinutes <= 3) {
+                    numScenes = 16;
+                } else if (targetMinutes <= 10) {
+                    numScenes = 24;
+                } else if (targetMinutes <= 15) {
+                    numScenes = 30;
+                } else {
+                    numScenes = 36; // 36 adegan kunci sepanjang film
                 }
 
-                const maxStart = Math.max(0.2, duration - clipDurationSec - 0.5);
-                const interval = Math.max(clipDurationSec, Math.floor(maxStart / totalTargetClips));
+                let clipDurationSec = Math.round(targetTotalSeconds / numScenes);
+
+                // Jika durasi film asli lebih pendek dari target, sesuaikan
+                if (filmDuration < targetTotalSeconds) {
+                    targetTotalSeconds = Math.max(15, filmDuration * 0.95);
+                    clipDurationSec = Math.max(3, Math.floor(targetTotalSeconds / numScenes));
+                }
+
+                // Sebarkan titik awal adegan (timestamps) merata dari awal hingga akhir film
+                const maxPossibleStart = Math.max(0.5, filmDuration - clipDurationSec - 0.5);
+                const interval = Math.max(clipDurationSec * 0.8, maxPossibleStart / (numScenes - 1 || 1));
                 const timestamps = [];
-                for (let t = 0.5; t <= maxStart && timestamps.length < totalTargetClips; t += interval) {
+                for (let idx = 0; idx < numScenes; idx++) {
+                    const t = Math.min(maxPossibleStart, 0.5 + idx * interval);
                     timestamps.push(t);
                 }
-                if (timestamps.length === 0) timestamps.push(0);
 
                 appState.extractedFrames = [];
 
@@ -832,15 +905,16 @@
                 const frameDurationUs = Math.round(1_000_000 / fps);
                 const targetFramesPerClip = Math.round(clipDurationSec * fps);
 
-                // Deteksi kapabilitas encoder WebCodecs (Hardware accelerated H.264)
+                // Deteksi kapabilitas encoder WebCodecs
                 const canUseWebCodecs = typeof VideoEncoder !== "undefined" && typeof Mp4Muxer !== "undefined";
                 let muxer = null;
                 let videoEncoder = null;
                 let encoderError = null;
                 let currentTimestampUs = 0;
                 let totalFramesEncoded = 0;
+                let totalSecondsRecorded = 0;
 
-                // Fallback MediaRecorder jika WebCodecs tidak tersedia
+                // Fallback MediaRecorder
                 let mediaRecorder = null;
                 let recordedChunks = [];
                 let fallbackMime = "video/webm";
@@ -879,7 +953,7 @@
                         fallbackMime = "video/webm;codecs=vp9";
                         fallbackExt = "webm";
                     }
-                    mediaRecorder = new MediaRecorder(stream, { mimeType: fallbackMime, videoBitsPerSecond: 2500000 });
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: fallbackMime, videoBitsPerSecond: 1800000 });
                     mediaRecorder.ondataavailable = (e) => {
                         if (e.data && e.data.size > 0) recordedChunks.push(e.data);
                     };
@@ -888,8 +962,13 @@
 
                 // 2. Loop memotong adegan: PLAY video asli & rekam frame bergerak nyata
                 for (let i = 0; i < timestamps.length; i++) {
+                    if (appState.stopRequested) {
+                        console.log("Stop requested by user. Finalizing with current clips...");
+                        break;
+                    }
+
                     const startTime = timestamps[i];
-                    progressLabel.textContent = `Memotong adegan bergerak #${i + 1}/${timestamps.length} (${formatTime(startTime)})...`;
+                    progressLabel.textContent = `Memotong adegan #${i + 1}/${timestamps.length} (${formatTime(startTime)}) • Durasi: ${formatTime(totalSecondsRecorded)} / ${targetMinutes}:00...`;
 
                     // Seek ke detik adegan
                     await seekVideo(hiddenVid, startTime);
@@ -926,12 +1005,13 @@
                     let duplicateCount = 0;
 
                     while (frameInClip < targetFramesPerClip && !hiddenVid.ended && hiddenVid.currentTime < clipEndTime + 0.3) {
+                        if (appState.stopRequested) break;
                         if (encoderError) throw encoderError;
                         await waitForNextVideoFrame(hiddenVid);
 
                         if (hiddenVid.currentTime === lastTime) {
                             duplicateCount++;
-                            if (duplicateCount > 20) break;
+                            if (duplicateCount > 25) break;
                         } else {
                             duplicateCount = 0;
                             lastTime = hiddenVid.currentTime;
@@ -975,13 +1055,15 @@
                         frameInClip++;
                     }
 
+                    totalSecondsRecorded += (frameInClip / fps);
+
                     try {
                         hiddenVid.pause();
                     } catch (e) {}
 
                     // C. Sisipkan Micro-Replay Hook khas Alur Cerita Anti-Copyright (setiap adegan ke-3)
-                    if (optCut3s && i > 0 && i % 3 === 0) {
-                        const replayDuration = 0.8;
+                    if (optCut3s && i > 0 && i % 3 === 0 && !appState.stopRequested) {
+                        const replayDuration = 1.0;
                         const replayStart = Math.max(startTime, hiddenVid.currentTime - replayDuration);
                         await seekVideo(hiddenVid, replayStart);
 
@@ -992,13 +1074,14 @@
                         const replayFrames = Math.round(replayDuration * fps);
                         let rCount = 0;
                         while (rCount < replayFrames && !hiddenVid.ended) {
+                            if (appState.stopRequested) break;
                             if (encoderError) throw encoderError;
                             await waitForNextVideoFrame(hiddenVid);
 
                             ctx.save();
                             ctx.clearRect(0, 0, targetW, targetH);
                             if (optColorSpeed) ctx.filter = "contrast(1.07) saturate(1.14) brightness(1.02)";
-                            const scale = 1.12;
+                            const scale = 1.10;
                             const w = targetW * scale;
                             const h = targetH * scale;
                             ctx.drawImage(hiddenVid, (targetW - w) / 2, (targetH - h) / 2, w, h);
@@ -1017,19 +1100,21 @@
                             rCount++;
                         }
 
+                        totalSecondsRecorded += (rCount / fps);
+
                         try {
                             hiddenVid.pause();
                         } catch (e) {}
                     }
 
                     // Update UI Progress
-                    const pct = Math.round(((i + 1) / timestamps.length) * 100);
+                    const pct = Math.min(100, Math.round(((i + 1) / timestamps.length) * 100));
                     progressBar.style.width = `${pct}%`;
                     progressPct.textContent = `${pct}%`;
                 }
 
                 // 3. Finalisasi file video MP4 hasil potongan murni
-                progressLabel.textContent = "Menyimpan video MP4 hasil potongan film (Siap CapCut)...";
+                progressLabel.textContent = `Menyimpan video MP4 hasil potongan (${formatTime(totalSecondsRecorded)} Siap CapCut)...`;
 
                 if (canUseWebCodecs) {
                     await videoEncoder.flush();
@@ -1046,7 +1131,8 @@
                     dlBtn.href = appState.processedVideoUrl;
                     dlBtn.download = "alur-cerita-anticopyright.mp4";
 
-                    document.getElementById("clipSummaryBadge").textContent = `${timestamps.length} Klip Video Asli Bergerak (MP4)`;
+                    const mbSize = Math.round(mp4Blob.size / (1024 * 1024));
+                    document.getElementById("clipSummaryBadge").textContent = `${appState.extractedFrames.length} Adegan • Durasi: ${formatTime(totalSecondsRecorded)} (${mbSize} MB MP4)`;
                     document.getElementById("processedVideoResult").classList.remove("hidden");
                 } else if (mediaRecorder) {
                     await new Promise((resolve) => {
@@ -1059,7 +1145,8 @@
                             dlBtn.href = appState.processedVideoUrl;
                             dlBtn.download = `alur-cerita-anticopyright.${fallbackExt}`;
 
-                            document.getElementById("clipSummaryBadge").textContent = `${timestamps.length} Klip Video Asli Bergerak (${fallbackExt.toUpperCase()})`;
+                            const mbSize = Math.round(blob.size / (1024 * 1024));
+                            document.getElementById("clipSummaryBadge").textContent = `${appState.extractedFrames.length} Adegan • Durasi: ${formatTime(totalSecondsRecorded)} (${mbSize} MB)`;
                             document.getElementById("processedVideoResult").classList.remove("hidden");
                             resolve();
                         };
@@ -1075,8 +1162,8 @@
                 document.getElementById("crStatusLabel").className = "text-xs font-bold text-emerald-400";
                 document.getElementById("generateScriptBtn").disabled = false;
                 setActiveStep(2);
-                updateStatusBadge("Klip Video Siap • Lanjut Generate Naskah", "emerald");
-                showToast("Video film berhasil dipotong-potong menjadi klip bergerak MP4 murni & visual siap dibaca AI!", "success");
+                updateStatusBadge("Klip Siap • Lanjut Generate Naskah", "emerald");
+                showToast(`Video alur cerita berhasil dipotong! Total durasi: ${formatTime(totalSecondsRecorded)} siap edit di CapCut.`, "success");
 
             } catch (err) {
                 console.error(err);
@@ -1086,6 +1173,7 @@
                 if (hiddenVid && hiddenVid.parentNode) {
                     hiddenVid.parentNode.removeChild(hiddenVid);
                 }
+                if (stopBtn) stopBtn.classList.add("hidden");
                 btn.disabled = false;
                 btn.classList.remove("opacity-60", "cursor-not-allowed");
             }
@@ -1155,6 +1243,9 @@
             const overlay = document.getElementById("scriptLoadingOverlay");
             const genBtn = document.getElementById("generateScriptBtn");
 
+            const targetMinutes = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
+            const targetWords = targetMinutes * 125; // ~2.500 kata untuk 20 menit bicara
+
             const styleDescriptions = {
                 santai_gaul: "Gaya YouTuber Alur Cerita Film Indonesia yang santai, gaul, asik, ekspresif (pakai kata sapaan natural seperti 'Nah guys', 'Gila sih', 'Di sini terlihat...', 'Tanpa basa-basi'), bikin penonton betah nonton sampai habis.",
                 dramatis_sinematik: "Gaya narator film sinematik yang dramatis, mendalam, penuh emosi, menyentuh hati, menggunakan pemilihan diksi puitis namun tetap mengalir enak didengar.",
@@ -1165,29 +1256,50 @@
 
             overlay.classList.remove("hidden");
             genBtn.disabled = true;
-            updateStatusBadge("AI Menulis Naskah Visual...", "indigo");
+            updateStatusBadge(`AI Menulis Naskah ~${targetMinutes} Menit...`, "indigo");
 
             try {
-                // Susun parts multimodal: instruksi + urutan gambar frame beserta timestamp-nya
                 const parts = [
                     {
-                        text: `Kamu adalah penulis naskah (scriptwriter) profesional untuk channel YouTube Alur Cerita Film.
-Tugasmu: Buat naskah narasi alur cerita film dalam Bahasa Indonesia yang SINKRON 100% dengan urutan potongan gambar adegan (visual keyframes) yang dilampirkan di bawah ini.
+                        text: `Kamu adalah master scriptwriter profesional untuk channel YouTube Alur Cerita Film ternama di Indonesia.
+TUGAS UTAMA: Tulis naskah narasi alur cerita film LENGKAP & MENDALAM dalam Bahasa Indonesia yang sinkron 100% dengan urutan visual keyframe yang dilampirkan.
+TARGET DURASI BACA: Sekitar ${targetMinutes} MENIT (Target kata: ${targetWords - 200} sampai ${targetWords + 400} kata padat, mendalam, dan mengalir).
 
-ATURAN WAJIB:
-1. Gaya Bahasa Narator: ${styleDescriptions[styleValue]}
-2. Konteks Tambahan dari Kreator: ${extraContext ? extraContext : "Tidak ada, analisis murni dari ekspresi, aksi, latar tempat, dan kejadian di gambar."}
-3. Deskripsikan kejadian secara berurutan dari Adegan 1 sampai Adegan terakhir sehingga saat kreator menempelkan suara TTS ke video hasil potongan di CapCut, narasinya PAS dengan visual yang sedang tampil di layar!
-4. Gunakan kalimat yang natural untuk dibacakan oleh Voice Over / TTS (hindari simbol aneh seperti asterisk *, hashtag #, atau emoji di dalam teks narasi utama agar TTS membacanya dengan mulus).
-5. Berikan hook pembuka yang kuat di awal dan kalimat penutup (CTA ringan) di akhir.
+GAYA BAHASA NARATOR: ${styleDescriptions[styleValue]}
+${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}
 
-Berikut adalah urutan potongan visual dari video:`
+STRUKTUR WAJIB 6 BABAK SINEMATIK ALUR CERITA FILM YOUTUBE (TULIS LENGKAP TIAP BABAK DENGAN DETAIL CERITA YANG JELAS):
+1. [BABAK 1: OPENING HOOK & PENGENALAN] (~00:00 - ~03:00)
+   - Hook pembuka yang sangat memikat, bikin penonton penasaran dalam 15 detik pertama.
+   - Pengenalan tokoh utama, latar belakang kehidupan, dan awal mula situasi.
+2. [BABAK 2: INSIDEN PEMICU & KONFLIK AWAL] (~03:00 - ~07:00)
+   - Peristiwa tak terduga yang mengubah hidup tokoh utama.
+   - Langkah dan keputusan awal tokoh, rintangan pertama yang dihadapi.
+3. [BABAK 3: PERJALANAN, INTRIK & ESKALASI MASALAH] (~07:00 - ~12:00)
+   - Eskalasi ketegangan, dinamika hubungan antar tokoh, teka-teki yang mulai terungkap.
+   - Perjuangan karakter melawan bahaya yang semakin besar.
+4. [BABAK 4: RAHASIA TERUNGKAP & PLOT TWIST] (~12:00 - ~16:00)
+   - Fakta mengejutkan atau pengkhianatan yang tak terduga.
+   - Titik terendah karakter (terjepit di ujung tanduk).
+5. [BABAK 5: KLIMAKS & PERTARUNGAN PENENTUAN] (~16:00 - ~19:00)
+   - Puncak konfrontasi drama/aksi yang intens dan mendebarkan.
+   - Penentuan nasib hidup-mati karakter utama.
+6. [BABAK 6: RESOLUSI, ENDING & CLOSING YOUTUBER] (~19:00 - ~20:00)
+   - Akhir nasib seluruh karakter, penyelesaian cerita (happy/sad/twist ending).
+   - Pesan moral film & penutup khas YouTuber (ajak penonton tulis komentar, like, dan subscribe).
+
+ATURAN PENULISAN:
+- Tulis naskah yang MENGALIR PANJANG, PADAT, DAN MENARIK (JANGAN diringkas pendek!). Ceritakan setiap kejadian penting dengan gaya bertutur yang hidup.
+- Gunakan kalimat natural untuk dibacakan oleh Voice Over / TTS (HINDARI simbol aneh seperti asterisk *, hashtag #, bullet point, atau emoji di dalam teks narasi utama).
+- Naskah ini harus pas dibacakan selama ~${targetMinutes} menit agar jam tayang penonton YouTube tercapai!
+
+Berikut adalah urutan potongan gambar visual dari video film:`
                     }
                 ];
 
                 appState.extractedFrames.forEach((frame) => {
                     parts.push({
-                        text: `[Potongan Adegan #${frame.clipIndex} — Timestamp ${frame.timeFormatted}]`
+                        text: `[Adegan #${frame.clipIndex} — Waktu Film: ${frame.timeFormatted}]`
                     });
                     parts.push({
                         inlineData: {
@@ -1207,11 +1319,11 @@ Berikut adalah urutan potongan visual dari video:`
                             properties: {
                                 fullNarrationScript: {
                                     type: "STRING",
-                                    description: "Naskah lengkap alur cerita film yang mengalir mulus, siap langsung di-copy ke CapCut dan dibacakan oleh AI TTS tanpa simbol aneh."
+                                    description: "Naskah lengkap alur cerita film yang mengalir mulus, panjang dan mendalam (~2.500 kata untuk 20 menit), siap langsung di-copy ke CapCut dan dibacakan oleh AI TTS tanpa simbol aneh."
                                 },
                                 sceneAlignments: {
                                     type: "ARRAY",
-                                    description: "Pemetaan singkat tiap potongan timestamp dengan inti narasinya untuk panduan editing di CapCut.",
+                                    description: "Pemetaan 6 babak sinematik dan potongan adegan untuk panduan editing di CapCut.",
                                     items: {
                                         type: "OBJECT",
                                         properties: {
@@ -1247,8 +1359,8 @@ Berikut adalah urutan potongan visual dari video:`
                 renderSceneBreakdowns();
 
                 setActiveStep(3);
-                updateStatusBadge("Naskah Siap • Lanjut TTS", "emerald");
-                showToast("Naskah alur cerita berhasil dibuat sesuai visual video! Tinggal klik 'Generate Suara TTS'.", "success");
+                updateStatusBadge("Naskah Lengkap Siap • Lanjut TTS", "emerald");
+                showToast(`Naskah alur cerita (${targetMinutes} Menit) berhasil dibuat! Tinggal klik 'Generate Suara TTS' atau copy ke CapCut.`, "success");
 
             } catch (err) {
                 console.error(err);
@@ -1289,7 +1401,7 @@ Berikut adalah urutan potongan visual dari video:`
         function updateWordCount() {
             const text = document.getElementById("scriptOutput").value.trim();
             const words = text ? text.split(/\s+/).length : 0;
-            document.getElementById("wordCountBadge").textContent = `${words} kata`;
+            const estMinutes = Math.round((words / 125) * 10) / 10; document.getElementById("wordCountBadge").textContent = `${words} kata (~${estMinutes} menit bicara)`;
         }
 
         // Copy Naskah ke Clipboard (Menggunakan execCommand agar aman di iframe)
@@ -1333,61 +1445,103 @@ Berikut adalah urutan potongan visual dari video:`
             const loadingBox = document.getElementById("ttsLoadingBox");
             const resultBox = document.getElementById("audioResultBox");
 
-            const tonePrompts = {
-                santai_gaul: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan gaya santai, energik, ekspresif, dan akrab seperti YouTuber alur cerita populer:",
-                dramatis_sinematik: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada dramatis, emosional, mendalam, dan sinematik:",
-                misterius_horor: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada misterius, serius, dan penuh ketegangan:",
-                komedi_absurd: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada ceria, jenaka, santai, dan menghibur:",
-                dokumenter_formal: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan artikulasi jelas, tegas, dan berwibawa:"
-            };
-
             ttsBtn.disabled = true;
             ttsBtn.classList.add("opacity-60", "cursor-not-allowed");
             loadingBox.classList.remove("hidden");
             resultBox.classList.add("hidden");
-            updateStatusBadge("Merekam Suara Narator TTS...", "indigo");
+
+            const tonePrompts = {
+                santai_gaul: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan gaya santai, energik, asik khas YouTuber gaul, intonasi dinamis dan ekspresif:",
+                dramatis_sinematik: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada dramatis, mendalam, penuh penghayatan emosional dan berbobot:",
+                misterius_horor: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada misterius, menegangkan, pelan namun menusuk, penuh rasa penasaran:",
+                komedi_absurd: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada ceria, jenaka, santai, dan menghibur:",
+                dokumenter_formal: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan artikulasi jelas, tempo stabil, formal, dan berwibawa:"
+            };
 
             try {
-                const promptText = `${tonePrompts[styleValue]}\n\n${scriptText}`;
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${getActiveApiKey()}`;
+                // Pecah teks naskah panjang menjadi blok paragraf (~160 kata per blok) agar tidak melebihi batas durasi output TTS
+                const paragraphs = scriptText.split(/\n+/).map(p => p.trim()).filter(Boolean);
+                const textChunks = [];
+                let curChunk = [];
+                let curWords = 0;
 
-                const payload = {
-                    contents: [{
-                        parts: [{ text: promptText }]
-                    }],
-                    generationConfig: {
-                        responseModalities: ["AUDIO"],
-                        speechConfig: {
-                            voiceConfig: {
-                                prebuiltVoiceConfig: { voiceName: voiceName }
-                            }
-                        }
-                    },
-                    model: GEMINI_TTS_MODEL
-                };
-
-                const result = await fetchWithRetry(apiUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
-
-                if (!audioData || !mimeType || !mimeType.startsWith("audio/")) {
-                    throw new Error("Data audio tidak ditemukan dalam respons AI.");
+                for (const p of paragraphs) {
+                    const pWords = p.split(/\s+/).length;
+                    if (curWords + pWords > 160 && curChunk.length > 0) {
+                        textChunks.push(curChunk.join(" "));
+                        curChunk = [p];
+                        curWords = pWords;
+                    } else {
+                        curChunk.push(p);
+                        curWords += pWords;
+                    }
+                }
+                if (curChunk.length > 0) {
+                    textChunks.push(curChunk.join(" "));
                 }
 
-                // Ambil sampleRate dari mimeType (default 24000Hz jika tidak tercantum)
-                const rateMatch = mimeType.match(/rate=(\d+)/);
-                const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                const allPcmChunks = [];
+                let detectedSampleRate = 24000;
 
-                // Konversi Base64 PCM16 menjadi file WAV siap putar & download
-                const pcmBuffer = base64ToArrayBuffer(audioData);
-                const pcm16 = new Int16Array(pcmBuffer);
-                const wavBlob = pcmToWav(pcm16, sampleRate);
+                const progressTextEl = loadingBox.querySelector("p.text-xs") || loadingBox.querySelector("p");
+
+                for (let idx = 0; idx < textChunks.length; idx++) {
+                    const chunkText = textChunks[idx];
+                    const pct = Math.round(((idx + 1) / textChunks.length) * 100);
+                    updateStatusBadge(`Merekam Suara Bagian ${idx + 1}/${textChunks.length}...`, "indigo");
+                    if (progressTextEl) {
+                        progressTextEl.textContent = `Merekam suara narator bagian ${idx + 1} dari ${textChunks.length} (${pct}%)...`;
+                    }
+
+                    const promptText = `${tonePrompts[styleValue] || "Bacakan dengan gaya narator film:"}\n\n${chunkText}`;
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${getActiveApiKey()}`;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: voiceName }
+                                }
+                            }
+                        },
+                        model: GEMINI_TTS_MODEL
+                    };
+
+                    const result = await fetchWithRetry(apiUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+                    const audioData = part?.inlineData?.data;
+                    const mimeType = part?.inlineData?.mimeType;
+
+                    if (!audioData || !mimeType || !mimeType.startsWith("audio/")) {
+                        throw new Error(`Data audio bagian ${idx + 1} tidak ditemukan dalam respons AI.`);
+                    }
+
+                    const rateMatch = mimeType.match(/rate=(\d+)/);
+                    if (rateMatch && rateMatch[1]) {
+                        detectedSampleRate = parseInt(rateMatch[1], 10);
+                    }
+
+                    const pcmBuffer = base64ToArrayBuffer(audioData);
+                    allPcmChunks.push(new Int16Array(pcmBuffer));
+                }
+
+                // Gabungkan seluruh sampel PCM16 menjadi satu master audio tanpa jeda
+                const totalSamples = allPcmChunks.reduce((acc, c) => acc + c.length, 0);
+                const masterPcm = new Int16Array(totalSamples);
+                let offset = 0;
+                for (const chunk of allPcmChunks) {
+                    masterPcm.set(chunk, offset);
+                    offset += chunk.length;
+                }
+
+                const wavBlob = pcmToWav(masterPcm, detectedSampleRate);
 
                 if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
                 appState.audioBlobUrl = URL.createObjectURL(wavBlob);
@@ -1397,11 +1551,12 @@ Berikut adalah urutan potongan visual dari video:`
                 player.src = appState.audioBlobUrl;
                 dlAudioBtn.href = appState.audioBlobUrl;
 
-                document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName} (${sampleRate / 1000}kHz WAV)`;
+                const totalAudioSec = Math.round(totalSamples / detectedSampleRate);
+                document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName} • Durasi: ${formatTime(totalAudioSec)}`;
                 resultBox.classList.remove("hidden");
 
                 updateStatusBadge("Semua Siap Upload YouTube!", "emerald");
-                showToast("Suara narator berhasil dibuat! Tinggal download file .WAV dan masukkan ke CapCut.", "success");
+                showToast(`Suara narator (${formatTime(totalAudioSec)}) berhasil dibuat! Siap download .WAV dan pasang di CapCut.`, "success");
 
             } catch (err) {
                 console.error(err);
@@ -1414,7 +1569,6 @@ Berikut adalah urutan potongan visual dari video:`
             }
         }
 
-        // Konversi Base64 ke ArrayBuffer
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
             const len = binaryString.length;
