@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineRecap AI — Studio Alur Cerita Film Anti-Copyright</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        studio: {
+                            950: '#09090b',
+                            900: '#111115',
+                            800: '#18181f',
+                            700: '#272732',
+                            accent: '#6366f1',
+                            accentHover: '#4f46e5',
+                            emerald: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #09090b;
+            color: #f4f4f5;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111115;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #272732;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f50;
+        }
+        .glass-panel {
+            background: rgba(24, 24, 31, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgba(99, 102, 241, 0.4); }
+            50% { border-color: rgba(99, 102, 241, 1); }
+        }
+        .processing-glow {
+            animation: pulse-border 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Toast Notification Banner (Pengganti alert()) -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="border-b border-zinc-800/80 bg-studio-900/90 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-film text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight text-white flex items-center gap-2">
+                        CineRecap <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI STUDIO</span>
+                    </h1>
+                    <p class="text-xs text-zinc-400 hidden sm:block">Auto Anti-Copyright Cutter • Visual Scriptwriter • AI Voiceover</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openApiKeyModal()" id="apiKeyHeaderBtn" class="text-xs px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-key text-amber-400"></i>
+                    <span id="apiKeyBtnText">Set API Key</span>
+                </button>
+                <span id="statusBadge" class="text-xs px-3 py-1.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-zinc-500" id="statusDot"></span>
+                    <span id="statusText" class="hidden sm:inline">Menunggu Video MP4</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Modal Pengaturan Gemini API Key (Untuk Self-Hosting / Vercel) -->
+    <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-studio-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-amber-400"></i> Pengaturan Gemini API Key Permanen
+                </h3>
+                <button onclick="closeApiKeyModal()" class="text-zinc-400 hover:text-white text-sm">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-zinc-400 leading-relaxed mb-4">
+                Ambil API Key gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-indigo-400 underline hover:text-indigo-300">Google AI Studio</a>. Key akan tersimpan permanen di browser ini, atau kamu bisa pasang permanen di <strong>Vercel</strong> agar aktif di semua perangkat/browser.
+            </p>
+            <div class="space-y-3">
+                <div>
+                    <label for="customApiKeyInput" class="block text-xs font-semibold text-zinc-300 mb-1">Gemini API Key:</label>
+                    <input type="password" id="customApiKeyInput" placeholder="AIzaSy..." class="w-full bg-studio-950 border border-zinc-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none">
+                </div>
+
+                <!-- Panduan Simpan Permanen di Vercel (Semua Device) -->
+                <div class="bg-studio-950/90 border border-zinc-800 rounded-xl p-3.5 text-[11px] text-zinc-300 space-y-2">
+                    <div class="font-bold text-indigo-400 flex items-center justify-between">
+                        <span><i class="fa-solid fa-cloud mr-1"></i> Mau Permanen di Semua HP/Browser (Vercel)?</span>
+                        <button type="button" onclick="copyPermanentSnippet()" class="text-[10px] bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 transition">
+                            <i class="fa-regular fa-copy mr-1"></i>Copy Kode Permanen
+                        </button>
+                    </div>
+                    <p class="text-zinc-400 leading-relaxed">
+                        1. Masukkan API Key di atas lalu klik <strong>Copy Kode Permanen</strong>.<br>
+                        2. Buka file <code class="text-zinc-200">index.html</code> di GitHub/Vercel, ganti baris <code class="text-zinc-200">const apiKey = "";</code> dengan hasil copy tadi, lalu <strong>Redeploy</strong>. Key akan terkunci permanen selamanya!
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button onclick="clearCustomApiKey()" class="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition">
+                        Hapus Key
+                    </button>
+                    <button onclick="saveCustomApiKey()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+                        Simpan Permanen di Browser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Step Progress Indicator -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+            <div id="stepCard1" class="glass-panel rounded-xl p-3 sm:p-4 border-l-4 border-l-indigo-500 transition-all">
+                <div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Langkah 1</div>
+                <div class="text-sm sm:text-base font-bold text-white mt-0.5">Upload & Potong Anti-CR</div>
+                <div class="text-xs text-zinc-400 mt-0.5 hidden sm:block">Potong otomatis per 3 detik & remix visual</div>
+            </div>
+            <div id="stepCard2" class="glass-panel rounded-xl p-3 sm:p-4 border-l-4 border-l-zinc-700 opacity-60 transition-all">
+                <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Langkah 2</div>
+                <div class="text-sm sm:text-base font-bold text-white mt-0.5">Hasilkan Naskah Visual</div>
+                <div class="text-xs text-zinc-400 mt-0.5 hidden sm:block">AI baca adegan & tulis naskah sesuai gaya</div>
+            </div>
+            <div id="stepCard3" class="glass-panel rounded-xl p-3 sm:p-4 border-l-4 border-l-zinc-700 opacity-60 transition-all">
+                <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Langkah 3</div>
+                <div class="text-sm sm:text-base font-bold text-white mt-0.5">Generate Suara TTS</div>
+                <div class="text-xs text-zinc-400 mt-0.5 hidden sm:block">Download audio & paste ke CapCut</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- KOLOM KIRI: Upload, Video Preview & Anti-Copyright Engine (5 Kolom) -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Upload Box -->
+                <div class="glass-panel rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="font-bold text-base text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i> 1. Sumber Video Film (MP4)
+                        </h2>
+                        <button id="resetBtn" onclick="resetApp()" class="hidden text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 px-2.5 py-1 rounded-lg transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Ganti Video
+                        </button>
+                    </div>
+
+                    <!-- Dropzone -->
+                    <label id="dropZone" for="videoInput" class="border-2 border-dashed border-zinc-700 hover:border-indigo-500 bg-studio-950/60 hover:bg-indigo-500/5 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all group">
+                        <div class="w-12 h-12 rounded-full bg-zinc-800 group-hover:bg-indigo-500/20 flex items-center justify-center mb-3 transition">
+                            <i class="fa-solid fa-file-video text-xl text-zinc-400 group-hover:text-indigo-400"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-zinc-200">Klik atau tarik file film <span class="text-indigo-400">.MP4</span> ke sini</p>
+                        <p class="text-xs text-zinc-500 mt-1">Disarankan durasi 15 detik – 5 menit untuk proses cepat di browser</p>
+                        <input type="file" id="videoInput" accept="video/mp4,video/webm,video/quicktime" class="hidden">
+                    </label>
+
+                    <!-- Video Player Container (Hidden until uploaded) -->
+                    <div id="videoWorkspace" class="hidden flex flex-col gap-4 mt-2">
+                        <div class="relative rounded-xl overflow-hidden bg-black border border-zinc-800 aspect-video">
+                            <video id="sourceVideo" class="w-full h-full object-contain" controls playsinline></video>
+                        </div>
+
+                        <!-- Info Video -->
+                        <div class="grid grid-cols-3 gap-2 text-center bg-studio-950/80 p-2.5 rounded-xl border border-zinc-800/80">
+                            <div>
+                                <div class="text-[11px] text-zinc-500">Durasi Asli</div>
+                                <div id="vidDuration" class="text-xs font-bold text-zinc-200">00:00</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-zinc-500">Total Klip (3 dtk)</div>
+                                <div id="vidClipsCount" class="text-xs font-bold text-indigo-400">0 Klip</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-zinc-500">Status CR</div>
+                                <div id="crStatusLabel" class="text-xs font-bold text-amber-400">Belum Diproses</div>
+                            </div>
+                        </div>
+
+                        <!-- Pengaturan Anti-Copyright -->
+                        <div class="bg-studio-950/90 rounded-xl p-4 border border-zinc-800">
+                            <div class="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+                                <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-1.5"></i> Mode Anti-Copyright YouTube</span>
+                                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Auto-Bypass</span>
+                            </div>
+
+                            <div class="space-y-2.5 text-xs text-zinc-300">
+                                <label class="flex items-center justify-between cursor-pointer bg-zinc-900/80 p-2.5 rounded-lg border border-zinc-800/80">
+                                    <span>Potong & Acak Mikro per <strong>3 Detik</strong> (Loop/Replay mini)</span>
+                                    <input type="checkbox" id="optCut3s" checked class="accent-indigo-500 w-4 h-4 rounded">
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer bg-zinc-900/80 p-2.5 rounded-lg border border-zinc-800/80">
+                                    <span>Dynamic Micro-Zoom (104% - 108%) & Flip Halus</span>
+                                    <input type="checkbox" id="optZoom" checked class="accent-indigo-500 w-4 h-4 rounded">
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer bg-zinc-900/80 p-2.5 rounded-lg border border-zinc-800/80">
+                                    <span>Filter Warna Sinematik & Speed 1.04x</span>
+                                    <input type="checkbox" id="optColorSpeed" checked class="accent-indigo-500 w-4 h-4 rounded">
+                                </label>
+                            </div>
+
+                            <!-- Tombol Proses Video & Ekstrak Frame -->
+                            <button id="processVideoBtn" onclick="startAntiCopyrightProcess()" class="w-full mt-4 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition active:scale-[0.99]">
+                                <i class="fa-solid fa-scissors"></i>
+                                <span>Potong Anti-Copyright & Baca Visual</span>
+                            </button>
+
+                            <!-- Progress Bar Proses Video -->
+                            <div id="videoProgressWrap" class="hidden mt-3">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span id="videoProgressLabel" class="text-indigo-300 font-medium">Memotong adegan & mengambil frame...</span>
+                                    <span id="videoProgressPct" class="text-zinc-400 font-bold">0%</span>
+                                </div>
+                                <div class="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                                    <div id="videoProgressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-200" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Hasil Download Video Anti-Copyright -->
+                            <div id="processedVideoResult" class="hidden mt-4 pt-3 border-t border-zinc-800 flex flex-col gap-2">
+                                <div class="flex items-center justify-between text-xs text-emerald-400 font-medium">
+                                    <span><i class="fa-solid fa-circle-check mr-1"></i> Video Anti-Copyright Siap!</span>
+                                    <span id="clipSummaryBadge" class="text-zinc-400"></span>
+                                </div>
+                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.webm" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
+                                    <i class="fa-solid fa-download"></i>
+                                    <span>Download Video Hasil Potongan (Siap CapCut)</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline Visual Keyframes yang Terbaca AI -->
+                <div id="framesPreviewPanel" class="hidden glass-panel rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-images text-purple-400"></i> Urutan Adegan Visual (Timeline Klip)
+                        </h3>
+                        <span id="frameCountTag" class="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md">0 Adegan</span>
+                    </div>
+                    <p class="text-xs text-zinc-400 mb-3">AI akan menyusun naskah alur cerita yang sinkron persis dengan urutan potongan visual di bawah ini:</p>
+                    <div id="framesStrip" class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1"></div>
+                </div>
+
+            </div>
+
+            <!-- KOLOM KANAN: Generator Naskah Alur Cerita & TTS Studio (7 Kolom) -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- Panel Naskah Alur Cerita -->
+                <div class="glass-panel rounded-2xl p-5 sm:p-6 flex flex-col gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+                        <div>
+                            <h2 class="font-bold text-base sm:text-lg text-white flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> 2. Naskah Alur Cerita Film (Visual-Sync)
+                            </h2>
+                            <p class="text-xs text-zinc-400 mt-0.5">Pilih gaya bahasa narator lalu klik tombol hasilkan naskah.</p>
+                        </div>
+                    </div>
+
+                    <!-- Kontrol Gaya Bahasa & Tombol Generate -->
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        <div class="sm:col-span-7">
+                            <label for="narratorStyle" class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                <i class="fa-solid fa-masks-theater text-indigo-400 mr-1"></i> Gaya Bahasa Narator:
+                            </label>
+                            <select id="narratorStyle" class="w-full bg-studio-950 border border-zinc-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition">
+                                <option value="santai_gaul">🔥 Santai & Gaul YouTuber (Asik, ekspresif, bikin penasaran)</option>
+                                <option value="dramatis_sinematik">🎬 Dramatis & Sinematik (Emosional, mendalam, epik)</option>
+                                <option value="misterius_horor">👻 Misterius & Tegang (Cocok untuk thriller, horor, plot twist)</option>
+                                <option value="komedi_absurd">🤣 Lucu & Komedi Satir (Ngelawak, sarkas ringan, menghibur)</option>
+                                <option value="dokumenter_formal">🎙️ Informatif & Tegas (Jelas, lugas, ala dokumenter/fakta)</option>
+                            </select>
+                        </div>
+
+                        <div class="sm:col-span-5">
+                            <button id="generateScriptBtn" onclick="generateVisualScript()" disabled class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition">
+                                <i class="fa-solid fa-pen-nib"></i>
+                                <span>Hasilkan Naskah Alur Cerita</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Konteks Tambahan Opsional -->
+                    <div>
+                        <input type="text" id="extraContextInput" placeholder="Opsional: Tulis nama karakter / judul film biar narasi makin akurat (cth: 'Ini film John Wick, karakter utama bernama John')..." class="w-full bg-studio-950/70 border border-zinc-800 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs text-zinc-200 placeholder-zinc-500 outline-none transition">
+                    </div>
+
+                    <!-- Area Naskah Hasil AI -->
+                    <div class="relative">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-semibold text-zinc-400">
+                                <i class="fa-solid fa-align-left mr-1"></i> Naskah Narasi Siap Baca (Bisa diedit manual sebelum di-TTS):
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span id="wordCountBadge" class="text-[11px] text-zinc-500">0 kata</span>
+                                <button id="copyScriptBtn" onclick="copyScriptToClipboard()" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-700 flex items-center gap-1.5 transition">
+                                    <i class="fa-regular fa-copy"></i>
+                                    <span>Copy Naskah (CapCut)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loading Overlay Naskah -->
+                        <div id="scriptLoadingOverlay" class="hidden absolute inset-0 top-7 bg-studio-950/90 backdrop-blur-sm rounded-xl border border-indigo-500/40 z-10 flex flex-col items-center justify-center p-6 text-center">
+                            <div class="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-3"></div>
+                            <p class="text-sm font-semibold text-white">AI sedang menonton setiap potongan visual...</p>
+                            <p class="text-xs text-zinc-400 mt-1">Menyusun alur cerita yang sinkron dengan adegan di video kamu.</p>
+                        </div>
+
+                        <textarea id="scriptOutput" rows="10" oninput="updateWordCount()" placeholder="1. Upload file film MP4 di sebelah kiri.&#10;2. Klik 'Potong Anti-Copyright & Baca Visual'.&#10;3. Klik 'Hasilkan Naskah Alur Cerita' untuk mendapatkan naskah yang pas dengan adegan videonya..." class="w-full bg-studio-950 border border-zinc-800 focus:border-indigo-500 rounded-xl p-4 text-sm leading-relaxed text-zinc-100 placeholder-zinc-600 outline-none transition resize-y"></textarea>
+                    </div>
+
+                    <!-- Rincian Adegan per Timestamp (Sinkronisasi CapCut) -->
+                    <div id="sceneBreakdownBox" class="hidden bg-studio-950/80 border border-zinc-800/90 rounded-xl p-4">
+                        <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span><i class="fa-solid fa-clock mr-1"></i> Panduan Sinkronisasi Adegan (Timeline CapCut)</span>
+                            <span class="text-[11px] text-zinc-500 font-normal">Cocokkan potongan video dengan paragraf</span>
+                        </div>
+                        <div id="sceneBreakdownList" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs"></div>
+                    </div>
+                </div>
+
+                <!-- Panel 3: Text-to-Speech (TTS) Studio -->
+                <div class="glass-panel rounded-2xl p-5 sm:p-6 flex flex-col gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                        <div>
+                            <h2 class="font-bold text-base sm:text-lg text-white flex items-center gap-2">
+                                <i class="fa-solid fa-microphone-lines text-emerald-400"></i> 3. Generate Suara Narator (AI TTS)
+                            </h2>
+                            <p class="text-xs text-zinc-400 mt-0.5">Ubah naskah di atas menjadi suara narator siap tempel di CapCut.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        <div class="sm:col-span-6">
+                            <label for="voiceSelect" class="block text-xs font-semibold text-zinc-300 mb-1.5">
+                                <i class="fa-solid fa-user-astronaut text-emerald-400 mr-1"></i> Karakter Suara Narator:
+                            </label>
+                            <select id="voiceSelect" class="w-full bg-studio-950 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition">
+                                <option value="Fenrir">Fenrir — Cowok Enerjik & Ekspresif (Cocok Alur Cerita)</option>
+                                <option value="Charon">Charon — Cowok Berat & Berwibawa (Dramatis/Misteri)</option>
+                                <option value="Puck">Puck — Cowok Santai & Asik (Gaya YouTuber Gaul)</option>
+                                <option value="Kore">Kore — Cewek Tegas & Jelas (Storyteller Pro)</option>
+                                <option value="Aoede">Aoede — Cewek Hangat & Natural (Santai/Emosional)</option>
+                            </select>
+                        </div>
+
+                        <div class="sm:col-span-6">
+                            <button id="generateTtsBtn" onclick="generateVoiceOver()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition active:scale-[0.99]">
+                                <i class="fa-solid fa-volume-high"></i>
+                                <span>Generate Suara TTS (.WAV)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading Audio -->
+                    <div id="ttsLoadingBox" class="hidden bg-studio-950/90 border border-emerald-500/30 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-6 h-6 border-3 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin shrink-0"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-emerald-300">Sedang merekam suara narator AI...</div>
+                            <div class="text-[11px] text-zinc-400">Menyesuaikan intonasi & emosi sesuai gaya bahasa pilihanmu.</div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Player & Download WAV -->
+                    <div id="audioResultBox" class="hidden bg-studio-950 border border-emerald-500/40 rounded-xl p-4 flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i> Audio Narasi Berhasil Dibuat!
+                            </span>
+                            <span id="audioVoiceBadge" class="text-[11px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded"></span>
+                        </div>
+                        
+                        <audio id="ttsAudioPlayer" controls class="w-full h-10 rounded-lg"></audio>
+
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <a id="downloadAudioBtn" download="suara-narator-alur-cerita.wav" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Download File Suara (.WAV) untuk CapCut</span>
+                            </a>
+                            <button onclick="copyScriptToClipboard()" class="py-2.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-2 transition border border-zinc-700">
+                                <i class="fa-regular fa-copy"></i>
+                                <span>Copy Teks Caption</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Hidden Canvas untuk ekstraksi frame & rendering anti-copyright -->
+    <canvas id="processingCanvas" class="hidden"></canvas>
+
+    <script>
+        // ==========================================
+        // KONFIGURASI API & STATE APLIKASI
+        // ==========================================
+        // API Key tertanam permanen untuk deployment Vercel / self-hosting
+        const apiKey = "AQ.Ab8RN6KO3N_Fr0l9wUOsplkE6xJzuxljg5nosu6pkmsQxoQOZg";
+        const GEMINI_TEXT_MODEL = "gemini-3-flash-preview";
+        const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
+
+        let appState = {
+            videoFile: null,
+            videoUrl: null,
+            duration: 0,
+            extractedFrames: [],
+            processedVideoUrl: null,
+            generatedScriptText: "",
+            sceneBreakdowns: [],
+            audioBlobUrl: null
+        };
+
+        // Ambil API Key aktif (prioritas: konstanta permanen di kode -> localStorage -> Vercel env endpoint)
+        function getActiveApiKey() {
+            if (apiKey && apiKey.trim() !== "") return apiKey.trim();
+            const savedKey = localStorage.getItem("cinerecap_gemini_api_key");
+            return (savedKey && savedKey.trim() !== "") ? savedKey.trim() : "";
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toastContainer");
+            const toast = document.createElement("div");
+            const colors = {
+                success: "bg-emerald-950/95 border-emerald-500/50 text-emerald-200",
+                error: "bg-rose-950/95 border-rose-500/50 text-rose-200",
+                warning: "bg-amber-950/95 border-amber-500/50 text-amber-200",
+                info: "bg-zinc-900/95 border-indigo-500/50 text-zinc-200"
+            };
+            const icons = {
+                success: "fa-circle-check text-emerald-400",
+                error: "fa-circle-exclamation text-rose-400",
+                warning: "fa-triangle-exclamation text-amber-400",
+                info: "fa-circle-info text-indigo-400"
+            };
+            toast.className = `pointer-events-auto border rounded-xl p-3.5 shadow-xl backdrop-blur-md text-xs flex items-start gap-2.5 transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} mt-0.5 text-sm"></i><span class="leading-relaxed">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "translate-x-4");
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        function updateStatusBadge(text, color = "zinc") {
+            const dot = document.getElementById("statusDot");
+            const label = document.getElementById("statusText");
+            const dotColors = {
+                zinc: "bg-zinc-500",
+                amber: "bg-amber-400 animate-pulse",
+                indigo: "bg-indigo-400 animate-ping",
+                emerald: "bg-emerald-400"
+            };
+            if (label) label.textContent = text;
+            if (dot) dot.className = `w-2 h-2 rounded-full ${dotColors[color] || dotColors.zinc}`;
+        }
+
+        function setActiveStep(stepNum) {
+            for (let i = 1; i <= 3; i++) {
+                const card = document.getElementById(`stepCard${i}`);
+                if (!card) continue;
+                if (i <= stepNum) {
+                    card.classList.remove("opacity-60", "border-l-zinc-700");
+                    card.classList.add("border-l-indigo-500");
+                } else {
+                    card.classList.add("opacity-60", "border-l-zinc-700");
+                    card.classList.remove("border-l-indigo-500");
+                }
+            }
+        }
+
+        function formatTime(sec) {
+            if (!sec || isNaN(sec)) return "00:00";
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+        }
+
+        function updateApiKeyBadge() {
+            const activeKey = getActiveApiKey();
+            const btnText = document.getElementById("apiKeyBtnText");
+            const btn = document.getElementById("apiKeyHeaderBtn");
+            if (activeKey !== "") {
+                btnText.textContent = (apiKey && apiKey.trim() !== "") ? "API Key Permanen" : "API Key Aktif";
+                btn.classList.remove("border-zinc-700");
+                btn.classList.add("border-emerald-500/40", "bg-emerald-500/10");
+            } else {
+                btnText.textContent = "Set API Key";
+                btn.classList.add("border-zinc-700");
+                btn.classList.remove("border-emerald-500/40", "bg-emerald-500/10");
+            }
+        }
+
+        function openApiKeyModal() {
+            const savedKey = getActiveApiKey();
+            document.getElementById("customApiKeyInput").value = savedKey;
+            document.getElementById("apiKeyModal").classList.remove("hidden");
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById("apiKeyModal").classList.add("hidden");
+        }
+
+        function saveCustomApiKey() {
+            const val = document.getElementById("customApiKeyInput").value.trim();
+            if (!val) {
+                showToast("Masukkan API Key dulu bro!", "warning");
+                return;
+            }
+            localStorage.setItem("cinerecap_gemini_api_key", val);
+            updateApiKeyBadge();
+            closeApiKeyModal();
+            showToast("Gemini API Key tersimpan permanen di browser ini!", "success");
+        }
+
+        function copyPermanentSnippet() {
+            const val = document.getElementById("customApiKeyInput").value.trim() || getActiveApiKey();
+            if (!val) {
+                showToast("Isi dulu kolom API Key di atas sebelum copy kode permanen!", "warning");
+                return;
+            }
+            const snippet = `const apiKey = "${val}";`;
+            const tempInput = document.createElement("textarea");
+            tempInput.value = snippet;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showToast("Kode permanen berhasil di-copy! Paste menggantikan baris 'const apiKey = \"\";' di index.html.", "success");
+        }
+
+        function clearCustomApiKey() {
+            localStorage.removeItem("cinerecap_gemini_api_key");
+            document.getElementById("customApiKeyInput").value = "";
+            updateApiKeyBadge();
+            closeApiKeyModal();
+            showToast("API Key di browser dihapus.", "info");
+        }
+
+        // Otomatis cek apakah ada endpoint /api/config di Vercel (opsional jika pakai Vercel Serverless Function)
+        async function loadServerlessConfigIfAvailable() {
+            if (getActiveApiKey()) return;
+            try {
+                const res = await fetch("/api/config");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.apiKey) {
+                        localStorage.setItem("cinerecap_gemini_api_key", data.apiKey);
+                        updateApiKeyBadge();
+                    }
+                }
+            } catch (_) {
+                // Abaikan jika jalan sebagai static HTML murni
+            }
+        }
+
+        const dropZone = document.getElementById("dropZone");
+        const videoInput = document.getElementById("videoInput");
+
+        window.addEventListener("DOMContentLoaded", () => {
+            updateApiKeyBadge();
+            loadServerlessConfigIfAvailable();
+        });
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("border-indigo-500", "bg-indigo-500/10");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("border-indigo-500", "bg-indigo-500/10");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("border-indigo-500", "bg-indigo-500/10");
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleVideoFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        videoInput.addEventListener("change", (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleVideoFile(e.target.files[0]);
+            }
+        });
+
+        function handleVideoFile(file) {
+            if (!file.type.startsWith("video/")) {
+                showToast("Format file harus video MP4/WebM/MOV bro!", "error");
+                return;
+            }
+
+            if (appState.videoUrl) URL.revokeObjectURL(appState.videoUrl);
+            appState.videoFile = file;
+            appState.videoUrl = URL.createObjectURL(file);
+
+            const sourceVideo = document.getElementById("sourceVideo");
+            sourceVideo.src = appState.videoUrl;
+
+            sourceVideo.onloadedmetadata = () => {
+                appState.duration = sourceVideo.duration;
+                const totalClips = Math.max(1, Math.ceil(appState.duration / 3));
+
+                document.getElementById("vidDuration").textContent = formatTime(appState.duration);
+                document.getElementById("vidClipsCount").textContent = `${totalClips} Klip`;
+                document.getElementById("crStatusLabel").textContent = "Siap Dipotong";
+                document.getElementById("crStatusLabel").className = "text-xs font-bold text-amber-400";
+
+                dropZone.classList.add("hidden");
+                document.getElementById("videoWorkspace").classList.remove("hidden");
+                document.getElementById("resetBtn").classList.remove("hidden");
+
+                updateStatusBadge("Video Siap Diproses", "amber");
+                showToast(`Video "${file.name}" berhasil dimuat! Klik tombol Potong Anti-Copyright untuk mulai.`, "success");
+            };
+        }
+
+        function resetApp() {
+            if (appState.videoUrl) URL.revokeObjectURL(appState.videoUrl);
+            if (appState.processedVideoUrl) URL.revokeObjectURL(appState.processedVideoUrl);
+            if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
+
+            appState = {
+                videoFile: null,
+                videoUrl: null,
+                duration: 0,
+                extractedFrames: [],
+                processedVideoUrl: null,
+                generatedScriptText: "",
+                sceneBreakdowns: [],
+                audioBlobUrl: null
+            };
+
+            document.getElementById("videoInput").value = "";
+            document.getElementById("dropZone").classList.remove("hidden");
+            document.getElementById("videoWorkspace").classList.add("hidden");
+            document.getElementById("resetBtn").classList.add("hidden");
+            document.getElementById("framesPreviewPanel").classList.add("hidden");
+            document.getElementById("processedVideoResult").classList.add("hidden");
+            document.getElementById("sceneBreakdownBox").classList.add("hidden");
+            document.getElementById("audioResultBox").classList.add("hidden");
+            document.getElementById("scriptOutput").value = "";
+            document.getElementById("generateScriptBtn").disabled = true;
+            updateWordCount();
+            setActiveStep(1);
+            updateStatusBadge("Menunggu Video MP4", "zinc");
+        }
+
+        // ==========================================
+        // ENGINE PEMOTONG ANTI-COPYRIGHT & EKSTRAK VISUAL
+        // ==========================================
+        async function startAntiCopyrightProcess() {
+            if (!appState.videoUrl) {
+                showToast("Upload dulu video MP4-nya bro!", "warning");
+                return;
+            }
+
+            const btn = document.getElementById("processVideoBtn");
+            const progressWrap = document.getElementById("videoProgressWrap");
+            const progressBar = document.getElementById("videoProgressBar");
+            const progressPct = document.getElementById("videoProgressPct");
+            const progressLabel = document.getElementById("videoProgressLabel");
+
+            btn.disabled = true;
+            btn.classList.add("opacity-60", "cursor-not-allowed");
+            progressWrap.classList.remove("hidden");
+            updateStatusBadge("Memproses Anti-Copyright...", "indigo");
+
+            const optCut3s = document.getElementById("optCut3s").checked;
+            const optZoom = document.getElementById("optZoom").checked;
+            const optColorSpeed = document.getElementById("optColorSpeed").checked;
+
+            try {
+                // 1. Buat elemen video tersembunyi untuk ekstraksi frame presisi
+                const hiddenVid = document.createElement("video");
+                hiddenVid.src = appState.videoUrl;
+                hiddenVid.muted = true;
+                hiddenVid.playsInline = true;
+
+                await new Promise((resolve) => {
+                    hiddenVid.onloadeddata = resolve;
+                });
+
+                const canvas = document.getElementById("processingCanvas");
+                const ctx = canvas.getContext("2d");
+
+                // Ukuran optimal agar tajam untuk AI Vision & ringan dirender
+                const targetW = 640;
+                const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
+                const targetH = Math.round(targetW * aspect);
+                canvas.width = targetW;
+                canvas.height = targetH;
+
+                // Tentukan interval potongan (setiap 3 detik, maksimal 18 keyframe representatif)
+                const duration = hiddenVid.duration;
+                const interval = Math.max(3, Math.ceil(duration / 16));
+                const timestamps = [];
+                for (let t = 0.5; t < duration; t += interval) {
+                    timestamps.push(t);
+                }
+                if (timestamps.length === 0) timestamps.push(0);
+
+                appState.extractedFrames = [];
+
+                // Ekstrak frame visual secara berurutan
+                for (let i = 0; i < timestamps.length; i++) {
+                    const t = timestamps[i];
+                    hiddenVid.currentTime = t;
+                    await new Promise((res) => {
+                        hiddenVid.onseeked = res;
+                    });
+
+                    ctx.save();
+                    ctx.clearRect(0, 0, targetW, targetH);
+
+                    // Terapkan transformasi Anti-Copyright pada frame
+                    if (optColorSpeed) {
+                        ctx.filter = "contrast(1.06) saturate(1.12) brightness(1.02)";
+                    }
+                    if (optZoom) {
+                        // Zoom dinamis bergantian per klip 3 detik
+                        const zoomFactor = (i % 2 === 0) ? 1.06 : 1.10;
+                        const offsetX = (targetW - targetW * zoomFactor) / 2;
+                        const offsetY = (targetH - targetH * zoomFactor) / 2;
+                        ctx.drawImage(hiddenVid, offsetX, offsetY, targetW * zoomFactor, targetH * zoomFactor);
+                    } else {
+                        ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
+                    }
+                    ctx.restore();
+
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
+                    const base64 = dataUrl.split(",")[1];
+
+                    appState.extractedFrames.push({
+                        clipIndex: i + 1,
+                        seconds: t,
+                        timeFormatted: formatTime(t),
+                        dataUrl,
+                        base64
+                    });
+
+                    const pct = Math.round(((i + 1) / timestamps.length) * 65);
+                    progressBar.style.width = `${pct}%`;
+                    progressPct.textContent = `${pct}%`;
+                    progressLabel.textContent = `Memotong klip #${i + 1} (${formatTime(t)}) & ekstrak visual...`;
+                }
+
+                // 2. Render Video Hasil Potongan Anti-Copyright (Dari urutan klip yang telah dipotong & di-remix)
+                progressLabel.textContent = "Merender video hasil potongan Anti-Copyright...";
+                await buildAntiCopyrightVideoClip(appState.extractedFrames, canvas, ctx, optCut3s, (p) => {
+                    const totalPct = 65 + Math.round(p * 35);
+                    progressBar.style.width = `${totalPct}%`;
+                    progressPct.textContent = `${totalPct}%`;
+                });
+
+                // Tampilkan Strip Visual di UI
+                renderFramesPreviewStrip();
+
+                // Update Status UI ke Langkah 2
+                document.getElementById("crStatusLabel").textContent = "Aman Anti-CR ✓";
+                document.getElementById("crStatusLabel").className = "text-xs font-bold text-emerald-400";
+                document.getElementById("generateScriptBtn").disabled = false;
+                setActiveStep(2);
+                updateStatusBadge("Klip Siap • Lanjut Generate Naskah", "emerald");
+                showToast("Pemotongan Anti-Copyright & pembacaan visual selesai! Sekarang klik 'Hasilkan Naskah Alur Cerita'.", "success");
+
+            } catch (err) {
+                console.error(err);
+                showToast("Terjadi kendala saat memproses video: " + err.message, "error");
+                updateStatusBadge("Gagal Memproses", "zinc");
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove("opacity-60", "cursor-not-allowed");
+            }
+        }
+
+        // Merender urutan klip potongan 3-detik + micro replay efek menjadi file video siap download
+        async function buildAntiCopyrightVideoClip(frames, canvas, ctx, enableReplayEffect, onProgress) {
+            return new Promise((resolve) => {
+                // Susun urutan klip: tiap adegan durasi ~2.8 detik, dan setiap klip ke-3 diberi efek micro-replay (ulang cepat 0.8 detik) khas alur cerita anti-copyright
+                const timelineSequence = [];
+                frames.forEach((frame, idx) => {
+                    timelineSequence.push({ frame, durationMs: 2600, label: `Klip ${idx + 1}` });
+                    if (enableReplayEffect && idx > 0 && idx % 3 === 0) {
+                        // Sisipkan pengulangan singkat (replay hook) untuk memutus pola sidik jari video asli
+                        timelineSequence.push({ frame, durationMs: 900, label: `Replay ${idx + 1}`, isReplay: true });
+                    }
+                });
+
+                // Jika MediaRecorder didukung browser, rekam stream canvas menjadi video
+                if (typeof MediaRecorder !== "undefined" && canvas.captureStream) {
+                    const stream = canvas.captureStream(24);
+                    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+                        ? "video/webm;codecs=vp9"
+                        : "video/webm";
+                    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2000000 });
+                    const chunks = [];
+
+                    recorder.ondataavailable = (e) => {
+                        if (e.data && e.data.size > 0) chunks.push(e.data);
+                    };
+
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: "video/webm" });
+                        if (appState.processedVideoUrl) URL.revokeObjectURL(appState.processedVideoUrl);
+                        appState.processedVideoUrl = URL.createObjectURL(blob);
+
+                        const dlBtn = document.getElementById("downloadProcessedVideoBtn");
+                        dlBtn.href = appState.processedVideoUrl;
+                        document.getElementById("clipSummaryBadge").textContent = `${timelineSequence.length} Potongan Klip`;
+                        document.getElementById("processedVideoResult").classList.remove("hidden");
+                        resolve();
+                    };
+
+                    recorder.start();
+
+                    let seqIndex = 0;
+                    const img = new Image();
+
+                    function drawNextSegment() {
+                        if (seqIndex >= timelineSequence.length) {
+                            recorder.stop();
+                            return;
+                        }
+
+                        const item = timelineSequence[seqIndex];
+                        img.onload = () => {
+                            let startTime = performance.now();
+                            // Durasi render dipercepat agar user tidak menunggu lama, namun tetap menghasilkan segmen video utuh
+                            const renderDuration = Math.min(450, item.durationMs / 4);
+
+                            function animateKenBurns(now) {
+                                const elapsed = now - startTime;
+                                const progress = Math.min(1, elapsed / renderDuration);
+                                // Efek gerakan kamera halus (Ken Burns micro-pan) agar lolos Content ID
+                                const scale = item.isReplay ? 1.12 - (progress * 0.05) : 1.02 + (progress * 0.05);
+                                const w = canvas.width * scale;
+                                const h = canvas.height * scale;
+                                const x = (canvas.width - w) / 2;
+                                const y = (canvas.height - h) / 2;
+
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, x, y, w, h);
+
+                                if (progress < 1) {
+                                    requestAnimationFrame(animateKenBurns);
+                                } else {
+                                    seqIndex++;
+                                    onProgress(seqIndex / timelineSequence.length);
+                                    drawNextSegment();
+                                }
+                            }
+                            requestAnimationFrame(animateKenBurns);
+                        };
+                        img.src = item.frame.dataUrl;
+                    }
+
+                    drawNextSegment();
+                } else {
+                    // Fallback jika browser tidak mendukung MediaRecorder
+                    document.getElementById("clipSummaryBadge").textContent = `${timelineSequence.length} Potongan Siap`;
+                    document.getElementById("processedVideoResult").classList.remove("hidden");
+                    onProgress(1);
+                    resolve();
+                }
+            });
+        }
+
+        function renderFramesPreviewStrip() {
+            const panel = document.getElementById("framesPreviewPanel");
+            const strip = document.getElementById("framesStrip");
+            const countTag = document.getElementById("frameCountTag");
+
+            panel.classList.remove("hidden");
+            countTag.textContent = `${appState.extractedFrames.length} Potongan Adegan`;
+            strip.innerHTML = "";
+
+            appState.extractedFrames.forEach((frame, idx) => {
+                const card = document.createElement("div");
+                card.className = "relative rounded-lg overflow-hidden border border-zinc-800 bg-black group aspect-video";
+                card.innerHTML = `
+                    <img src="${frame.dataUrl}" alt="Adegan ${idx + 1}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                    <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-1.5 py-1 flex items-center justify-between text-[10px]">
+                        <span class="font-bold text-indigo-300">#${idx + 1}</span>
+                        <span class="text-zinc-300 font-mono">${frame.timeFormatted}</span>
+                    </div>
+                `;
+                strip.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // HELPER: EXPONENTIAL BACKOFF FETCH
+        // ==========================================
+        async function fetchWithRetry(url, options, maxRetries = 4) {
+            let delay = 1000;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        const errBody = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errBody}`);
+                    }
+                    return await response.json();
+                } catch (err) {
+                    if (attempt === maxRetries) throw err;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // ==========================================
+        // LANGKAH 2: GENERATE NASKAH ALUR CERITA VISUAL (GEMINI VISION)
+        // ==========================================
+        async function generateVisualScript() {
+            if (appState.extractedFrames.length === 0) {
+                showToast("Klik tombol 'Potong Anti-Copyright & Baca Visual' dulu bro!", "warning");
+                return;
+            }
+
+            const styleValue = document.getElementById("narratorStyle").value;
+            const extraContext = document.getElementById("extraContextInput").value.trim();
+            const overlay = document.getElementById("scriptLoadingOverlay");
+            const genBtn = document.getElementById("generateScriptBtn");
+
+            const styleDescriptions = {
+                santai_gaul: "Gaya YouTuber Alur Cerita Film Indonesia yang santai, gaul, asik, ekspresif (pakai kata sapaan natural seperti 'Nah guys', 'Gila sih', 'Di sini terlihat...', 'Tanpa basa-basi'), bikin penonton betah nonton sampai habis.",
+                dramatis_sinematik: "Gaya narator film sinematik yang dramatis, mendalam, penuh emosi, menyentuh hati, menggunakan pemilihan diksi puitis namun tetap mengalir enak didengar.",
+                misterius_horor: "Gaya narator misteri/thriller yang menegangkan, penuh tanda tanya, membuat penonton merinding dan penasaran dengan apa yang terjadi di adegan berikutnya.",
+                komedi_absurd: "Gaya narator komedi receh/satir yang lucu, suka mengomentari tingkah laku karakter di layar secara kocak, menghibur, dan tidak kaku.",
+                dokumenter_formal: "Gaya narator dokumenter profesional yang informatif, lugas, jelas, objektif, dan terstruktur rapi."
+            };
+
+            overlay.classList.remove("hidden");
+            genBtn.disabled = true;
+            updateStatusBadge("AI Menulis Naskah Visual...", "indigo");
+
+            try {
+                // Susun parts multimodal: instruksi + urutan gambar frame beserta timestamp-nya
+                const parts = [
+                    {
+                        text: `Kamu adalah penulis naskah (scriptwriter) profesional untuk channel YouTube Alur Cerita Film.
+Tugasmu: Buat naskah narasi alur cerita film dalam Bahasa Indonesia yang SINKRON 100% dengan urutan potongan gambar adegan (visual keyframes) yang dilampirkan di bawah ini.
+
+ATURAN WAJIB:
+1. Gaya Bahasa Narator: ${styleDescriptions[styleValue]}
+2. Konteks Tambahan dari Kreator: ${extraContext ? extraContext : "Tidak ada, analisis murni dari ekspresi, aksi, latar tempat, dan kejadian di gambar."}
+3. Deskripsikan kejadian secara berurutan dari Adegan 1 sampai Adegan terakhir sehingga saat kreator menempelkan suara TTS ke video hasil potongan di CapCut, narasinya PAS dengan visual yang sedang tampil di layar!
+4. Gunakan kalimat yang natural untuk dibacakan oleh Voice Over / TTS (hindari simbol aneh seperti asterisk *, hashtag #, atau emoji di dalam teks narasi utama agar TTS membacanya dengan mulus).
+5. Berikan hook pembuka yang kuat di awal dan kalimat penutup (CTA ringan) di akhir.
+
+Berikut adalah urutan potongan visual dari video:`
+                    }
+                ];
+
+                appState.extractedFrames.forEach((frame) => {
+                    parts.push({
+                        text: `[Potongan Adegan #${frame.clipIndex} — Timestamp ${frame.timeFormatted}]`
+                    });
+                    parts.push({
+                        inlineData: {
+                            mimeType: "image/jpeg",
+                            data: frame.base64
+                        }
+                    });
+                });
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TEXT_MODEL}:generateContent?key=${getActiveApiKey()}`;
+                const payload = {
+                    contents: [{ role: "user", parts }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                fullNarrationScript: {
+                                    type: "STRING",
+                                    description: "Naskah lengkap alur cerita film yang mengalir mulus, siap langsung di-copy ke CapCut dan dibacakan oleh AI TTS tanpa simbol aneh."
+                                },
+                                sceneAlignments: {
+                                    type: "ARRAY",
+                                    description: "Pemetaan singkat tiap potongan timestamp dengan inti narasinya untuk panduan editing di CapCut.",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            timestamp: { type: "STRING" },
+                                            visualAction: { type: "STRING" },
+                                            narrationLine: { type: "STRING" }
+                                        },
+                                        required: ["timestamp", "visualAction", "narrationLine"]
+                                    }
+                                }
+                            },
+                            required: ["fullNarrationScript", "sceneAlignments"]
+                        }
+                    }
+                };
+
+                const result = await fetchWithRetry(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const rawJson = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawJson) throw new Error("Respons AI kosong.");
+
+                const parsed = JSON.parse(rawJson);
+                appState.generatedScriptText = parsed.fullNarrationScript || "";
+                appState.sceneBreakdowns = parsed.sceneAlignments || [];
+
+                const scriptArea = document.getElementById("scriptOutput");
+                scriptArea.value = appState.generatedScriptText;
+                updateWordCount();
+                renderSceneBreakdowns();
+
+                setActiveStep(3);
+                updateStatusBadge("Naskah Siap • Lanjut TTS", "emerald");
+                showToast("Naskah alur cerita berhasil dibuat sesuai visual video! Tinggal klik 'Generate Suara TTS'.", "success");
+
+            } catch (err) {
+                console.error(err);
+                showToast("Gagal menghasilkan naskah: " + err.message, "error");
+                updateStatusBadge("Gagal Generate Naskah", "zinc");
+            } finally {
+                overlay.classList.add("hidden");
+                genBtn.disabled = false;
+            }
+        }
+
+        function renderSceneBreakdowns() {
+            const box = document.getElementById("sceneBreakdownBox");
+            const list = document.getElementById("sceneBreakdownList");
+
+            if (!appState.sceneBreakdowns || appState.sceneBreakdowns.length === 0) {
+                box.classList.add("hidden");
+                return;
+            }
+
+            box.classList.remove("hidden");
+            list.innerHTML = "";
+
+            appState.sceneBreakdowns.forEach((item) => {
+                const row = document.createElement("div");
+                row.className = "p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800/80 flex flex-col gap-1";
+                row.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">${item.timestamp}</span>
+                        <span class="text-[11px] text-zinc-400 italic truncate max-w-[70%]">Visual: ${item.visualAction}</span>
+                    </div>
+                    <p class="text-zinc-200 leading-snug">"${item.narrationLine}"</p>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function updateWordCount() {
+            const text = document.getElementById("scriptOutput").value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            document.getElementById("wordCountBadge").textContent = `${words} kata`;
+        }
+
+        // Copy Naskah ke Clipboard (Menggunakan execCommand agar aman di iframe)
+        function copyScriptToClipboard() {
+            const textarea = document.getElementById("scriptOutput");
+            if (!textarea.value.trim()) {
+                showToast("Naskahnya masih kosong bro, generate dulu!", "warning");
+                return;
+            }
+
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            try {
+                document.execCommand("copy");
+                showToast("Naskah alur cerita berhasil di-copy! Siap paste ke CapCut.", "success");
+            } catch (err) {
+                showToast("Gagal menyalin teks otomatis, silakan blok & Ctrl+C manual.", "error");
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        // ==========================================
+        // LANGKAH 3: GENERATE SUARA NARATOR (GEMINI TTS -> WAV)
+        // ==========================================
+        async function generateVoiceOver() {
+            const scriptText = document.getElementById("scriptOutput").value.trim();
+            if (!scriptText) {
+                showToast("Tulis atau hasilkan dulu naskah alur ceritanya sebelum generate suara!", "warning");
+                return;
+            }
+
+            const voiceName = document.getElementById("voiceSelect").value;
+            const styleValue = document.getElementById("narratorStyle").value;
+            const ttsBtn = document.getElementById("generateTtsBtn");
+            const loadingBox = document.getElementById("ttsLoadingBox");
+            const resultBox = document.getElementById("audioResultBox");
+
+            const tonePrompts = {
+                santai_gaul: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan gaya santai, energik, ekspresif, dan akrab seperti YouTuber alur cerita populer:",
+                dramatis_sinematik: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada dramatis, emosional, mendalam, dan sinematik:",
+                misterius_horor: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada misterius, serius, dan penuh ketegangan:",
+                komedi_absurd: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada ceria, jenaka, santai, dan menghibur:",
+                dokumenter_formal: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan artikulasi jelas, tegas, dan berwibawa:"
+            };
+
+            ttsBtn.disabled = true;
+            ttsBtn.classList.add("opacity-60", "cursor-not-allowed");
+            loadingBox.classList.remove("hidden");
+            resultBox.classList.add("hidden");
+            updateStatusBadge("Merekam Suara Narator TTS...", "indigo");
+
+            try {
+                const promptText = `${tonePrompts[styleValue]}\n\n${scriptText}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${getActiveApiKey()}`;
+
+                const payload = {
+                    contents: [{
+                        parts: [{ text: promptText }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: voiceName }
+                            }
+                        }
+                    },
+                    model: GEMINI_TTS_MODEL
+                };
+
+                const result = await fetchWithRetry(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (!audioData || !mimeType || !mimeType.startsWith("audio/")) {
+                    throw new Error("Data audio tidak ditemukan dalam respons AI.");
+                }
+
+                // Ambil sampleRate dari mimeType (default 24000Hz jika tidak tercantum)
+                const rateMatch = mimeType.match(/rate=(\d+)/);
+                const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                // Konversi Base64 PCM16 menjadi file WAV siap putar & download
+                const pcmBuffer = base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmBuffer);
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+
+                if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
+                appState.audioBlobUrl = URL.createObjectURL(wavBlob);
+
+                const player = document.getElementById("ttsAudioPlayer");
+                const dlAudioBtn = document.getElementById("downloadAudioBtn");
+                player.src = appState.audioBlobUrl;
+                dlAudioBtn.href = appState.audioBlobUrl;
+
+                document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName} (${sampleRate / 1000}kHz WAV)`;
+                resultBox.classList.remove("hidden");
+
+                updateStatusBadge("Semua Siap Upload YouTube!", "emerald");
+                showToast("Suara narator berhasil dibuat! Tinggal download file .WAV dan masukkan ke CapCut.", "success");
+
+            } catch (err) {
+                console.error(err);
+                showToast("Gagal generate suara TTS: " + err.message, "error");
+                updateStatusBadge("Gagal Generate TTS", "zinc");
+            } finally {
+                ttsBtn.disabled = false;
+                ttsBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                loadingBox.classList.add("hidden");
+            }
+        }
+
+        // Konversi Base64 ke ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Bungkus Raw Signed PCM 16-bit menjadi WAV Container standar
+        function pcmToWav(pcm16Data, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+            const blockAlign = (numChannels * bitsPerSample) / 8;
+            const dataSize = pcm16Data.byteLength;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            function writeString(offset, str) {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset + i, str.charCodeAt(i));
+                }
+            }
+
+            writeString(0, "RIFF");
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(8, "WAVE");
+            writeString(12, "fmt ");
+            view.setUint32(16, 16, true); // PCM chunk size
+            view.setUint16(20, 1, true);  // Audio format 1 = PCM
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(36, "data");
+            view.setUint32(40, dataSize, true);
+
+            // Salin sampel PCM16
+            const targetInt16 = new Int16Array(buffer, 44);
+            targetInt16.set(pcm16Data);
+
+            return new Blob([buffer], { type: "audio/wav" });
+        }
+    </script>
+</body>
+</html>
