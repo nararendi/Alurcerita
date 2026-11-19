@@ -323,6 +323,30 @@
                     </div>
 
                     <!-- Kontrol Gaya Bahasa & Tombol Generate -->
+                    <!-- Pilihan Sumber Analisis Naskah (Mentah vs Hasil Anti-CR) -->
+                    <div class="mb-3 p-3 rounded-xl bg-studio-950/90 border border-zinc-800">
+                        <div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span><i class="fa-solid fa-layer-group text-indigo-400 mr-1.5"></i> Sumber Analisis Naskah:</span>
+                            <span id="scriptSourceBadge" class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">⚡ Video Mentah (Instan)</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900 border border-indigo-500/50 cursor-pointer text-zinc-200 transition" id="labelSrcRaw">
+                                <input type="radio" name="scriptSourceMode" id="srcModeRaw" value="raw" checked onchange="updateScriptSourceMode()" class="accent-indigo-500">
+                                <div>
+                                    <div class="font-bold text-white text-xs">⚡ Dari Video Mentah</div>
+                                    <div class="text-[10px] text-zinc-400">Analisis cepat ~2 detik tanpa nunggu potong video</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 cursor-pointer text-zinc-400 transition" id="labelSrcAc">
+                                <input type="radio" name="scriptSourceMode" id="srcModeAc" value="anticopyright" onchange="updateScriptSourceMode()" class="accent-indigo-500">
+                                <div>
+                                    <div class="font-bold text-zinc-200 text-xs">🛡️ Dari Hasil Anti-Copyright</div>
+                                    <div class="text-[10px] text-zinc-400">Analisis dari video yang sudah dipotong</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                         <div class="sm:col-span-7">
                             <label for="narratorStyle" class="block text-xs font-semibold text-zinc-300 mb-1.5">
@@ -675,15 +699,22 @@
 
                 document.getElementById("vidDuration").textContent = formatTime(appState.duration);
                 document.getElementById("vidClipsCount").textContent = `${totalClips} Klip`;
-                document.getElementById("crStatusLabel").textContent = "Siap Dipotong";
+                document.getElementById("crStatusLabel").textContent = "Siap Diproses";
                 document.getElementById("crStatusLabel").className = "text-xs font-bold text-amber-400";
 
                 dropZone.classList.add("hidden");
                 document.getElementById("videoWorkspace").classList.remove("hidden");
                 document.getElementById("resetBtn").classList.remove("hidden");
 
-                updateStatusBadge("Video Siap Diproses", "amber");
-                showToast(`Video "${file.name}" berhasil dimuat! Klik tombol Potong Anti-Copyright untuk mulai.`, "success");
+                // Langsung aktifkan tombol Generate Naskah agar user bebas memilih generate dari video mentah!
+                const genBtn = document.getElementById("generateScriptBtn");
+                if (genBtn) {
+                    genBtn.disabled = false;
+                    genBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                }
+
+                updateStatusBadge("Video Siap • Bebas Pilih Naskah / Potong", "emerald");
+                showToast(`Video "${file.name}" berhasil dimuat! Anda bisa langsung buat Naskah dari video mentah ATAU potong anti-copyright dulu.`, "success");
             };
         }
 
@@ -1228,6 +1259,109 @@
         // ==========================================
         // LANGKAH 2: GENERATE NASKAH ALUR CERITA VISUAL (GEMINI VISION)
         // ==========================================
+                // Ubah badge dan style pilihan sumber analisis naskah
+        function updateScriptSourceMode() {
+            const isRaw = document.getElementById("srcModeRaw")?.checked;
+            const badge = document.getElementById("scriptSourceBadge");
+            const labelRaw = document.getElementById("labelSrcRaw");
+            const labelAc = document.getElementById("labelSrcAc");
+
+            if (isRaw) {
+                if (badge) {
+                    badge.textContent = "⚡ Video Mentah (Instan)";
+                    badge.className = "text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold";
+                }
+                if (labelRaw) {
+                    labelRaw.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900 border border-indigo-500/50 cursor-pointer text-zinc-200 transition";
+                }
+                if (labelAc) {
+                    labelAc.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 cursor-pointer text-zinc-400 transition";
+                }
+            } else {
+                if (badge) {
+                    badge.textContent = "🛡️ Hasil Anti-CR";
+                    badge.className = "text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 font-bold";
+                }
+                if (labelRaw) {
+                    labelRaw.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 cursor-pointer text-zinc-400 transition";
+                }
+                if (labelAc) {
+                    labelAc.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900 border border-indigo-500/50 cursor-pointer text-zinc-200 transition";
+                }
+            }
+        }
+
+        // Ekstraksi cepat 20 keyframe visual langsung dari video mentah (~2 detik)
+        async function extractKeyframesFromRawVideo() {
+            return new Promise(async (resolve, reject) => {
+                let hiddenVid = null;
+                try {
+                    hiddenVid = document.createElement("video");
+                    hiddenVid.src = appState.videoUrl;
+                    hiddenVid.muted = true;
+                    hiddenVid.playsInline = true;
+                    hiddenVid.style.position = "fixed";
+                    hiddenVid.style.left = "-9999px";
+                    hiddenVid.style.top = "-9999px";
+                    hiddenVid.style.width = "320px";
+                    hiddenVid.style.height = "180px";
+                    hiddenVid.style.opacity = "0.01";
+                    document.body.appendChild(hiddenVid);
+
+                    await new Promise((res, rej) => {
+                        hiddenVid.onloadeddata = res;
+                        hiddenVid.onerror = rej;
+                    });
+
+                    const canvas = document.getElementById("processingCanvas");
+                    const ctx = canvas.getContext("2d");
+                    const targetW = 640;
+                    const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
+                    let targetH = Math.round(targetW * aspect);
+                    if (targetH % 2 !== 0) targetH += 1;
+                    canvas.width = targetW;
+                    canvas.height = targetH;
+
+                    const duration = hiddenVid.duration;
+                    const numKeyframes = 20; // 20 adegan kunci sepanjang film
+                    const step = Math.max(1, (duration - 2) / numKeyframes);
+                    const timestamps = [];
+                    for (let i = 0; i < numKeyframes; i++) {
+                        timestamps.push(Math.min(duration - 0.5, 0.5 + i * step));
+                    }
+
+                    appState.extractedFrames = [];
+
+                    for (let i = 0; i < timestamps.length; i++) {
+                        const t = timestamps[i];
+                        hiddenVid.currentTime = t;
+                        await new Promise((res) => {
+                            const onSeek = () => { hiddenVid.removeEventListener("seeked", onSeek); res(); };
+                            hiddenVid.addEventListener("seeked", onSeek);
+                        });
+                        ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
+                        const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
+                        appState.extractedFrames.push({
+                            clipIndex: i + 1,
+                            seconds: t,
+                            timeFormatted: formatTime(t),
+                            dataUrl,
+                            base64: dataUrl.split(",")[1]
+                        });
+                    }
+
+                    renderFramesPreviewStrip();
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                } finally {
+                    if (hiddenVid && hiddenVid.parentNode) {
+                        hiddenVid.parentNode.removeChild(hiddenVid);
+                    }
+                }
+            });
+        }
+
         async function generateVisualScript() {
             if (!getActiveApiKey()) {
                 showToast("Masukkan dulu Gemini API Key di tombol 'Set API Key' kanan atas bro!", "warning");
@@ -1235,18 +1369,19 @@
                 return;
             }
 
-            if (appState.extractedFrames.length === 0) {
-                showToast("Klik tombol 'Potong Anti-Copyright & Baca Visual' dulu bro!", "warning");
+            if (!appState.videoUrl) {
+                showToast("Upload dulu file video film Anda di sebelah kiri bro!", "warning");
                 return;
             }
 
-            const styleValue = document.getElementById("narratorStyle").value;
-            const extraContext = document.getElementById("extraContextInput").value.trim();
+            const isRawSource = document.getElementById("srcModeRaw")?.checked;
             const overlay = document.getElementById("scriptLoadingOverlay");
             const genBtn = document.getElementById("generateScriptBtn");
-
             const targetMinutes = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
-            const targetWords = targetMinutes * 125; // ~2.500 kata untuk 20 menit bicara
+            const targetWords = targetMinutes * 125;
+
+            const styleValue = document.getElementById("narratorStyle").value;
+            const extraContext = document.getElementById("extraContextInput").value.trim();
 
             const styleDescriptions = {
                 santai_gaul: "Gaya YouTuber Alur Cerita Film Indonesia yang santai, gaul, asik, ekspresif (pakai kata sapaan natural seperti 'Nah guys', 'Gila sih', 'Di sini terlihat...', 'Tanpa basa-basi'), bikin penonton betah nonton sampai habis.",
@@ -1258,9 +1393,23 @@
 
             overlay.classList.remove("hidden");
             genBtn.disabled = true;
-            updateStatusBadge(`AI Menulis Naskah ~${targetMinutes} Menit...`, "indigo");
 
             try {
+                // Jika user memilih mode Video Mentah ATAU belum pernah dipotong anti-copyright:
+                if (isRawSource || appState.extractedFrames.length === 0) {
+                    updateStatusBadge("Membaca Visual Video Mentah...", "indigo");
+                    const titleP = overlay.querySelector("p.text-sm") || overlay.querySelector("p");
+                    const subP = overlay.querySelector("p.text-xs");
+                    if (titleP) titleP.textContent = "Mengekstrak adegan dari video mentah...";
+                    if (subP) subP.textContent = "Menganalisis 20 adegan kunci secara instan (~2 detik)...";
+                    await extractKeyframesFromRawVideo();
+                }
+
+                updateStatusBadge(`AI Menulis Naskah ~${targetMinutes} Menit...`, "indigo");
+                const titleP = overlay.querySelector("p.text-sm") || overlay.querySelector("p");
+                const subP = overlay.querySelector("p.text-xs");
+                if (titleP) titleP.textContent = "Gemini AI sedang menulis naskah alur cerita...";
+                if (subP) subP.textContent = `Menyusun 6 babak sinematik (~2.500 kata untuk ${targetMinutes} menit bicara)...`;
                 const parts = [
                     {
                         text: `Kamu adalah master scriptwriter profesional untuk channel YouTube Alur Cerita Film ternama di Indonesia.
@@ -1366,11 +1515,32 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                 if (!result && lastError) throw lastError;
 
                 const rawJson = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!rawJson) throw new Error("Respons AI kosong.");
+                if (!rawJson) throw new Error("Respons AI kosong atau diblokir.");
 
-                const parsed = JSON.parse(rawJson);
-                appState.generatedScriptText = parsed.fullNarrationScript || "";
-                appState.sceneBreakdowns = parsed.sceneAlignments || [];
+                let fullScript = "";
+                let breakdowns = [];
+
+                try {
+                    let cleanText = rawJson.trim();
+                    if (cleanText.startsWith("```json")) {
+                        cleanText = cleanText.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+                    } else if (cleanText.startsWith("```")) {
+                        cleanText = cleanText.replace(/^```\s*/, "").replace(/\s*```$/, "");
+                    }
+                    const parsed = JSON.parse(cleanText);
+                    fullScript = parsed.fullNarrationScript || "";
+                    breakdowns = parsed.sceneAlignments || [];
+                } catch (parseErr) {
+                    console.warn("JSON parse fallback. Mengambil teks naskah langsung:", parseErr);
+                    fullScript = rawJson.replace(/```(json)?/g, "").trim();
+                }
+
+                if (!fullScript) {
+                    fullScript = rawJson.trim();
+                }
+
+                appState.generatedScriptText = fullScript;
+                appState.sceneBreakdowns = breakdowns;
 
                 const scriptArea = document.getElementById("scriptOutput");
                 scriptArea.value = appState.generatedScriptText;
