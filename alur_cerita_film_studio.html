@@ -490,8 +490,8 @@
         const apiKey = "AQ.Ab8RN6KO3N_Fr0l9wUOsplkE6xJzuxljg5nosu6pkmsQxoQOZg";
         const GEMINI_TEXT_MODEL = "gemini-3.8-flash";
         const GEMINI_TTS_MODEL = "gemini-3.8-flash-tts";
-        const CANDIDATE_TEXT_MODELS = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
-        const CANDIDATE_TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts", "gemini-2.0-flash"];
+        const CANDIDATE_TEXT_MODELS = ["gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-2.5-flash"];
+        const CANDIDATE_TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-3.8-flash"];
 
         let appState = {
             videoFile: null,
@@ -1238,17 +1238,22 @@
         // ==========================================
         // HELPER: EXPONENTIAL BACKOFF FETCH
         // ==========================================
-        async function fetchWithRetry(url, options, maxRetries = 4) {
+        async function fetchWithRetry(url, options, maxRetries = 2) {
             let delay = 1000;
             for (let attempt = 0; attempt <= maxRetries; attempt++) {
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
                         const errBody = await response.text();
-                        throw new Error(`HTTP ${response.status}: ${errBody}`);
+                        const err = new Error(`HTTP ${response.status}: ${errBody}`);
+                        err.status = response.status;
+                        throw err;
                     }
                     return await response.json();
                 } catch (err) {
+                    if (err.status && [400, 401, 403, 404].includes(err.status)) {
+                        throw err;
+                    }
                     if (attempt === maxRetries) throw err;
                     await new Promise(res => setTimeout(res, delay));
                     delay *= 2;
@@ -1648,27 +1653,8 @@ Berikut adalah urutan potongan gambar visual dari video film:`
             };
 
             try {
-                // Pecah teks naskah panjang menjadi blok paragraf (~160 kata per blok) agar tidak melebihi batas durasi output TTS
-                const paragraphs = scriptText.split(/\n+/).map(p => p.trim()).filter(Boolean);
-                const textChunks = [];
-                let curChunk = [];
-                let curWords = 0;
-
-                for (const p of paragraphs) {
-                    const pWords = p.split(/\s+/).length;
-                    if (curWords + pWords > 160 && curChunk.length > 0) {
-                        textChunks.push(curChunk.join(" "));
-                        curChunk = [p];
-                        curWords = pWords;
-                    } else {
-                        curChunk.push(p);
-                        curWords += pWords;
-                    }
-                }
-                if (curChunk.length > 0) {
-                    textChunks.push(curChunk.join(" "));
-                }
-
+                // Pecah teks naskah secara presisi berdasarkan kalimat (~120 kata per chunk)
+                const textChunks = chunkTextForTTS(scriptText, 120);
                 const allPcmChunks = [];
                 let detectedSampleRate = 24000;
 
@@ -1688,10 +1674,12 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     let lastTtsErr = null;
 
                     for (const ttsModel of CANDIDATE_TTS_MODELS) {
-                        try {
-                            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${getActiveApiKey()}`;
-                            const payload = {
-                                contents: [{ parts: [{ text: promptText }] }],
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${getActiveApiKey()}`;
+                        
+                        // Coba format voiceConfig kompatibel (tanpa field 'model' di body)
+                        const payloadsToTry = [
+                            {
+                                contents: [{ role: "user", parts: [{ text: promptText }] }],
                                 generationConfig: {
                                     responseModalities: ["AUDIO"],
                                     speechConfig: {
@@ -1699,21 +1687,40 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                                             prebuiltVoiceConfig: { voiceName: voiceName }
                                         }
                                     }
-                                },
-                                model: ttsModel
-                            };
-
-                            result = await fetchWithRetry(apiUrl, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify(payload)
-                            });
-                            if (result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
-                                break;
+                                }
+                            },
+                            {
+                                contents: [{ role: "user", parts: [{ text: promptText }] }],
+                                generationConfig: {
+                                    responseModalities: ["AUDIO"],
+                                    speechConfig: {
+                                        voiceConfig: {
+                                            voice: voiceName
+                                        }
+                                    }
+                                }
                             }
-                        } catch (tErr) {
-                            console.warn(`TTS Model ${ttsModel} gagal, mencoba alternatif...`, tErr);
-                            lastTtsErr = tErr;
+                        ];
+
+                        for (const payload of payloadsToTry) {
+                            try {
+                                result = await fetchWithRetry(apiUrl, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+                                    break;
+                                }
+                            } catch (tErr) {
+                                console.warn(`TTS Model ${ttsModel} gagal:`, tErr.message);
+                                lastTtsErr = tErr;
+                            }
+                        }
+
+                        if (result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+                            console.log(`Berhasil generate suara dengan model: ${ttsModel}`);
+                            break;
                         }
                     }
 
@@ -1723,17 +1730,27 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     const audioData = part?.inlineData?.data;
                     const mimeType = part?.inlineData?.mimeType;
 
-                    if (!audioData || !mimeType || !mimeType.startsWith("audio/")) {
+                    if (!audioData) {
                         throw new Error(`Data audio bagian ${idx + 1} tidak ditemukan dalam respons AI.`);
                     }
 
-                    const rateMatch = mimeType.match(/rate=(\d+)/);
+                    const rateMatch = (mimeType || "").match(/rate=(\d+)/);
                     if (rateMatch && rateMatch[1]) {
                         detectedSampleRate = parseInt(rateMatch[1], 10);
                     }
 
-                    const pcmBuffer = base64ToArrayBuffer(audioData);
-                    allPcmChunks.push(new Int16Array(pcmBuffer));
+                    const rawBuffer = base64ToArrayBuffer(audioData);
+                    const extracted = extractPcmSamples(rawBuffer);
+                    if (extracted.sampleRate) {
+                        detectedSampleRate = extracted.sampleRate;
+                    }
+                    if (extracted.pcm16 && extracted.pcm16.length > 0) {
+                        allPcmChunks.push(extracted.pcm16);
+                    }
+                }
+
+                if (allPcmChunks.length === 0) {
+                    throw new Error("Gagal mengekstrak sampel audio narator.");
                 }
 
                 // Gabungkan seluruh sampel PCM16 menjadi satu master audio tanpa jeda
@@ -1771,6 +1788,71 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                 ttsBtn.classList.remove("opacity-60", "cursor-not-allowed");
                 loadingBox.classList.add("hidden");
             }
+        }
+
+        // Pemecah teks naskah menjadi blok kalimat (~120 kata per chunk) agar aman untuk batas token output TTS
+        function chunkTextForTTS(text, maxWordsPerChunk = 120) {
+            const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(Boolean);
+            const sentences = [];
+            for (const para of rawParagraphs) {
+                const matches = para.match(/[^.!?]+[.!?]+|[^.!?]+$/g);
+                if (matches) {
+                    for (const s of matches) {
+                        const trimmed = s.trim();
+                        if (trimmed) sentences.push(trimmed);
+                    }
+                } else {
+                    sentences.push(para);
+                }
+            }
+
+            const chunks = [];
+            let cur = [];
+            let curCount = 0;
+            for (const s of sentences) {
+                const wCount = s.split(/\s+/).filter(Boolean).length;
+                if (curCount + wCount > maxWordsPerChunk && cur.length > 0) {
+                    chunks.push(cur.join(" "));
+                    cur = [s];
+                    curCount = wCount;
+                } else {
+                    cur.push(s);
+                    curCount += wCount;
+                }
+            }
+            if (cur.length > 0) chunks.push(cur.join(" "));
+            return chunks.length > 0 ? chunks : [text];
+        }
+
+        // Ekstraksi sampel PCM16 baik dari file WAV RIFF utuh maupun raw PCM
+        function extractPcmSamples(arrayBuffer) {
+            const bytes = new Uint8Array(arrayBuffer);
+            if (bytes.length >= 44 &&
+                bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+                bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) {
+                let offset = 12;
+                let detectedRate = 24000;
+                let pcmData = null;
+                while (offset < bytes.length - 8) {
+                    const chunkId = String.fromCharCode(bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]);
+                    const view = new DataView(arrayBuffer, offset + 4, 4);
+                    const chunkSize = view.getUint32(0, true);
+                    if (chunkId === "fmt ") {
+                        const fmtView = new DataView(arrayBuffer, offset + 8, Math.min(chunkSize, 16));
+                        detectedRate = fmtView.getUint32(4, true);
+                    } else if (chunkId === "data") {
+                        const dataStart = offset + 8;
+                        const dataBytes = Math.min(chunkSize, bytes.length - dataStart);
+                        const safeBytes = dataBytes - (dataBytes % 2);
+                        pcmData = new Int16Array(arrayBuffer.slice(dataStart, dataStart + safeBytes));
+                        break;
+                    }
+                    offset += 8 + chunkSize;
+                }
+                if (pcmData) return { pcm16: pcmData, sampleRate: detectedRate };
+            }
+            const safeLen = arrayBuffer.byteLength - (arrayBuffer.byteLength % 2);
+            return { pcm16: new Int16Array(arrayBuffer.slice(0, safeLen)), sampleRate: null };
         }
 
         function base64ToArrayBuffer(base64) {
