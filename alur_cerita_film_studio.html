@@ -439,7 +439,7 @@
         // ==========================================
         // API Key tertanam permanen untuk deployment Vercel / self-hosting
         const apiKey = "AQ.Ab8RN6KO3N_Fr0l9wUOsplkE6xJzuxljg5nosu6pkmsQxoQOZg";
-        const GEMINI_TEXT_MODEL = "gemini-3-flash-preview";
+        const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
         const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
         let appState = {
@@ -453,11 +453,12 @@
             audioBlobUrl: null
         };
 
-        // Ambil API Key aktif (prioritas: konstanta permanen di kode -> localStorage -> Vercel env endpoint)
+        // Ambil API Key aktif (prioritas: localStorage user -> konstanta kode jika valid AIzaSy)
         function getActiveApiKey() {
-            if (apiKey && apiKey.trim() !== "") return apiKey.trim();
             const savedKey = localStorage.getItem("cinerecap_gemini_api_key");
-            return (savedKey && savedKey.trim() !== "") ? savedKey.trim() : "";
+            if (savedKey && savedKey.trim() !== "") return savedKey.trim();
+            if (apiKey && apiKey.trim() !== "" && !apiKey.startsWith("AQ.")) return apiKey.trim();
+            return "";
         }
 
         function showToast(message, type = "info") {
@@ -1138,6 +1139,12 @@
         // LANGKAH 2: GENERATE NASKAH ALUR CERITA VISUAL (GEMINI VISION)
         // ==========================================
         async function generateVisualScript() {
+            if (!getActiveApiKey()) {
+                showToast("Masukkan dulu Gemini API Key di tombol 'Set API Key' kanan atas bro!", "warning");
+                openApiKeyModal();
+                return;
+            }
+
             if (appState.extractedFrames.length === 0) {
                 showToast("Klik tombol 'Potong Anti-Copyright & Baca Visual' dulu bro!", "warning");
                 return;
@@ -1308,6 +1315,12 @@ Berikut adalah urutan potongan visual dari video:`
         // LANGKAH 3: GENERATE SUARA NARATOR (GEMINI TTS -> WAV)
         // ==========================================
         async function generateVoiceOver() {
+            if (!getActiveApiKey()) {
+                showToast("Masukkan dulu Gemini API Key di tombol 'Set API Key' kanan atas bro!", "warning");
+                openApiKeyModal();
+                return;
+            }
+
             const scriptText = document.getElementById("scriptOutput").value.trim();
             if (!scriptText) {
                 showToast("Tulis atau hasilkan dulu naskah alur ceritanya sebelum generate suara!", "warning");
