@@ -1385,8 +1385,8 @@
         // ==========================================
         // HELPER: EXPONENTIAL BACKOFF FETCH
         // ==========================================
-        async function fetchWithRetry(url, options, maxRetries = 2) {
-            let delay = 1000;
+        async function fetchWithRetry(url, options, maxRetries = 4, onStatusUpdate = null) {
+            let delay = 2000;
             for (let attempt = 0; attempt <= maxRetries; attempt++) {
                 try {
                     const response = await fetch(url, options);
@@ -1394,16 +1394,32 @@
                         const errBody = await response.text();
                         const err = new Error(`HTTP ${response.status}: ${errBody}`);
                         err.status = response.status;
+                        err.body = errBody;
                         throw err;
                     }
                     return await response.json();
                 } catch (err) {
+                    // Client error permanen: 400, 401, 403, 404 jangan di-retry
                     if (err.status && [400, 401, 403, 404].includes(err.status)) {
                         throw err;
                     }
                     if (attempt === maxRetries) throw err;
-                    await new Promise(res => setTimeout(res, delay));
-                    delay *= 2;
+
+                    // Jika terkena kuota per menit (HTTP 429 Too Many Requests / Resource Exhausted):
+                    if (err.status === 429 || (err.message && err.message.includes("429"))) {
+                        const waitSec = 15 + (attempt * 5); // 15s, 20s, 25s, 30s
+                        if (onStatusUpdate) {
+                            onStatusUpdate(`Menunggu reset kuota Gemini API (~${waitSec} detik)...`);
+                        }
+                        console.warn(`Hit 429 Rate Limit. Menunggu ${waitSec} detik untuk reset kuota...`);
+                        await new Promise(res => setTimeout(res, waitSec * 1000));
+                    } else {
+                        if (onStatusUpdate) {
+                            onStatusUpdate(`Mencoba ulang koneksi API (${attempt + 1}/${maxRetries})...`);
+                        }
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2;
+                    }
                 }
             }
         }
@@ -1702,12 +1718,16 @@ Berikut adalah urutan potongan gambar visual dari video film:`
             };
             const styleDirective = styleMetadataMap[styleValue] || "engaging film storyteller";
 
-            try {
-                // Pecah teks naskah secara presisi berdasarkan kalimat (~120 kata per chunk)
-                const textChunks = chunkTextForTTS(scriptText, 120);
-                const allPcmChunks = [];
-                let detectedSampleRate = 24000;
+            // Menyimpan model & payload yang terbukti berhasil agar tidak buang kuota mencoba ulang
+            let confirmedWorkingModel = null;
+            let confirmedPayloadIdx = null;
 
+            const allPcmChunks = [];
+            let detectedSampleRate = 24000;
+
+            try {
+                // Pecah teks naskah secara presisi berdasarkan kalimat (~150 kata per chunk untuk efisiensi request)
+                const textChunks = chunkTextForTTS(scriptText, 150);
                 const progressTextEl = loadingBox.querySelector("p.text-xs") || loadingBox.querySelector("p");
 
                 for (let idx = 0; idx < textChunks.length; idx++) {
@@ -1718,86 +1738,100 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                         progressTextEl.textContent = `Merekam suara narator bagian ${idx + 1} dari ${textChunks.length} (${pct}%)...`;
                     }
 
-                    // PENTING: Jangan masukkan kalimat perintah seperti "Bacakan naskah berikut:" ke dalam text!
-                    // Model TTS membaca persis huruf demi huruf yang ada di 'text'. Masukkan murni teks naskah saja!
-                    let result = null;
-                    let lastTtsErr = null;
+                    // Jeda sopan 1.5 detik antar request untuk menghindari limit 15 RPM
+                    if (idx > 0) {
+                        await new Promise(res => setTimeout(res, 1500));
+                    }
 
-                    for (const ttsModel of CANDIDATE_TTS_MODELS) {
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${getActiveApiKey()}`;
-                        
-                        // Coba format voiceConfig kompatibel (dengan speechMetadata & fallback murni text)
-                        const payloadsToTry = [
-                            {
-                                contents: [{
-                                    role: "user",
-                                    parts: [{
-                                        text: chunkText,
-                                        speechMetadata: { style: styleDirective }
-                                    }]
-                                }],
-                                generationConfig: {
-                                    responseModalities: ["AUDIO"],
-                                    speechConfig: {
-                                        voiceConfig: {
-                                            prebuiltVoiceConfig: { voiceName: voiceName }
-                                        }
-                                    }
-                                }
-                            },
-                            {
-                                contents: [{
-                                    role: "user",
-                                    parts: [{
-                                        text: chunkText,
-                                        speechMetadata: { style: styleDirective }
-                                    }]
-                                }],
-                                generationConfig: {
-                                    responseModalities: ["AUDIO"],
-                                    speechConfig: {
-                                        voiceConfig: {
-                                            voice: voiceName
-                                        }
-                                    }
-                                }
-                            },
-                            {
-                                contents: [{
-                                    role: "user",
-                                    parts: [{
-                                        text: chunkText
-                                    }]
-                                }],
-                                generationConfig: {
-                                    responseModalities: ["AUDIO"],
-                                    speechConfig: {
-                                        voiceConfig: {
-                                            prebuiltVoiceConfig: { voiceName: voiceName }
-                                        }
+                    // Siapkan variasi payload kompatibel
+                    const buildPayloads = (text) => [
+                        {
+                            contents: [{
+                                role: "user",
+                                parts: [{
+                                    text,
+                                    speechMetadata: { style: styleDirective }
+                                }]
+                            }],
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: { voiceName: voiceName }
                                     }
                                 }
                             }
-                        ];
+                        },
+                        {
+                            contents: [{
+                                role: "user",
+                                parts: [{
+                                    text,
+                                    speechMetadata: { style: styleDirective }
+                                }]
+                            }],
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        voice: voiceName
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            contents: [{
+                                role: "user",
+                                parts: [{
+                                    text
+                                }]
+                            }],
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: { voiceName: voiceName }
+                                    }
+                                }
+                            }
+                        }
+                    ];
 
-                        for (const payload of payloadsToTry) {
+                    let result = null;
+                    let lastTtsErr = null;
+
+                    // Daftar model yang dicoba (prioritaskan model yang sudah terbukti berhasil di chunk sebelumnya)
+                    const modelsToTry = confirmedWorkingModel ? [confirmedWorkingModel] : CANDIDATE_TTS_MODELS;
+
+                    for (const ttsModel of modelsToTry) {
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${getActiveApiKey()}`;
+                        const allPayloads = buildPayloads(chunkText);
+                        const payloadsToExecute = confirmedPayloadIdx !== null ? [{ p: allPayloads[confirmedPayloadIdx], idx: confirmedPayloadIdx }] : allPayloads.map((p, i) => ({ p, idx: i }));
+
+                        for (const item of payloadsToExecute) {
                             try {
                                 result = await fetchWithRetry(apiUrl, {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify(payload)
+                                    body: JSON.stringify(item.p)
+                                }, 5, (statusMsg) => {
+                                    if (progressTextEl) {
+                                        progressTextEl.textContent = `Bagian ${idx + 1}/${textChunks.length}: ${statusMsg}`;
+                                    }
                                 });
+
                                 if (result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+                                    confirmedWorkingModel = ttsModel;
+                                    confirmedPayloadIdx = item.idx;
                                     break;
                                 }
                             } catch (tErr) {
-                                console.warn(`TTS Model ${ttsModel} gagal:`, tErr.message);
+                                console.warn(`TTS Model ${ttsModel} payload ${item.idx} gagal:`, tErr.message);
                                 lastTtsErr = tErr;
                             }
                         }
 
                         if (result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
-                            console.log(`Berhasil generate suara dengan model: ${ttsModel}`);
                             break;
                         }
                     }
@@ -1809,7 +1843,7 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     const mimeType = part?.inlineData?.mimeType;
 
                     if (!audioData) {
-                        throw new Error(`Data audio bagian ${idx + 1} tidak ditemukan dalam respons AI.`);
+                        throw new Error(`Data audio bagian ${idx + 1} tidak ditemukan.`);
                     }
 
                     const rateMatch = (mimeType || "").match(/rate=(\d+)/);
@@ -1859,8 +1893,35 @@ Berikut adalah urutan potongan gambar visual dari video film:`
 
             } catch (err) {
                 console.error(err);
-                showToast("Gagal generate suara TTS: " + err.message, "error");
-                updateStatusBadge("Gagal Generate TTS", "zinc");
+
+                // Penyelamatan audio parsial: Jika sempat berhasil sebagian (misal 10 dari 19 bagian), jangan buang hasilnya!
+                if (allPcmChunks.length > 0) {
+                    const totalSamples = allPcmChunks.reduce((acc, c) => acc + c.length, 0);
+                    const masterPcm = new Int16Array(totalSamples);
+                    let offset = 0;
+                    for (const chunk of allPcmChunks) {
+                        masterPcm.set(chunk, offset);
+                        offset += chunk.length;
+                    }
+                    const wavBlob = pcmToWav(masterPcm, detectedSampleRate);
+                    if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
+                    appState.audioBlobUrl = URL.createObjectURL(wavBlob);
+
+                    const player = document.getElementById("ttsAudioPlayer");
+                    const dlAudioBtn = document.getElementById("downloadAudioBtn");
+                    player.src = appState.audioBlobUrl;
+                    dlAudioBtn.href = appState.audioBlobUrl;
+
+                    const totalAudioSec = Math.round(totalSamples / detectedSampleRate);
+                    document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName} (Tersimpan ${allPcmChunks.length} Bagian) • Durasi: ${formatTime(totalAudioSec)}`;
+                    resultBox.classList.remove("hidden");
+
+                    showToast(`Terselamatkan ${allPcmChunks.length} bagian audio (${formatTime(totalAudioSec)}). Kendala: ${err.message}`, "warning");
+                    updateStatusBadge(`Tersimpan ${allPcmChunks.length} Bagian Audio`, "amber");
+                } else {
+                    showToast("Gagal generate suara TTS: " + err.message, "error");
+                    updateStatusBadge("Gagal Generate TTS", "zinc");
+                }
             } finally {
                 ttsBtn.disabled = false;
                 ttsBtn.classList.remove("opacity-60", "cursor-not-allowed");
@@ -1869,7 +1930,7 @@ Berikut adalah urutan potongan gambar visual dari video film:`
         }
 
         // Pemecah teks naskah menjadi blok kalimat (~120 kata per chunk) agar aman untuk batas token output TTS
-        function chunkTextForTTS(text, maxWordsPerChunk = 120) {
+        function chunkTextForTTS(text, maxWordsPerChunk = 150) {
             const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const sentences = [];
             for (const para of rawParagraphs) {
