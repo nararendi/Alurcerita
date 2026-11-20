@@ -323,28 +323,23 @@
                     </div>
 
                     <!-- Kontrol Gaya Bahasa & Tombol Generate -->
-                    <!-- Pilihan Sumber Analisis Naskah (Mentah vs Hasil Anti-CR) -->
-                    <div class="mb-3 p-3 rounded-xl bg-studio-950/90 border border-zinc-800">
-                        <div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2 flex items-center justify-between">
-                            <span><i class="fa-solid fa-layer-group text-indigo-400 mr-1.5"></i> Sumber Analisis Naskah:</span>
-                            <span id="scriptSourceBadge" class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">⚡ Video Mentah (Instan)</span>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <label class="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900 border border-indigo-500/50 cursor-pointer text-zinc-200 transition" id="labelSrcRaw">
-                                <input type="radio" name="scriptSourceMode" id="srcModeRaw" value="raw" checked onchange="updateScriptSourceMode()" class="accent-indigo-500">
-                                <div>
-                                    <div class="font-bold text-white text-xs">⚡ Dari Video Mentah</div>
-                                    <div class="text-[10px] text-zinc-400">Analisis cepat ~2 detik tanpa nunggu potong video</div>
+                    <!-- Sumber Analisis: Terkunci 100% ke Hasil Potong Video Anti-Copyright agar Sinkron dengan CapCut -->
+                    <div class="mb-3 p-3 rounded-xl bg-studio-950/90 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                        <div class="flex items-center gap-2.5 text-zinc-300">
+                            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                                <i class="fa-solid fa-shield-halved text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-white text-xs flex items-center gap-1.5">
+                                    <span>Sumber Analisis: Hasil Potongan Anti-Copyright</span>
+                                    <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded font-mono font-bold">100% Visual-Sync</span>
                                 </div>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 cursor-pointer text-zinc-400 transition" id="labelSrcAc">
-                                <input type="radio" name="scriptSourceMode" id="srcModeAc" value="anticopyright" onchange="updateScriptSourceMode()" class="accent-indigo-500">
-                                <div>
-                                    <div class="font-bold text-zinc-200 text-xs">🛡️ Dari Hasil Anti-Copyright</div>
-                                    <div class="text-[10px] text-zinc-400">Analisis dari video yang sudah dipotong</div>
-                                </div>
-                            </label>
+                                <div class="text-[11px] text-zinc-400">Naskah & TTS disusun persis mengikuti urutan klip hasil potong untuk memudahkan edit di CapCut</div>
+                            </div>
                         </div>
+                        <span id="scriptReadyBadge" class="self-start sm:self-auto text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 font-bold whitespace-nowrap">
+                            <i class="fa-solid fa-clock mr-1"></i> Potong Video di Langkah 1 Dulu
+                        </span>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
@@ -706,15 +701,20 @@
                 document.getElementById("videoWorkspace").classList.remove("hidden");
                 document.getElementById("resetBtn").classList.remove("hidden");
 
-                // Langsung aktifkan tombol Generate Naskah agar user bebas memilih generate dari video mentah!
+                // Tombol generate naskah dikunci sampai video anti-copyright selesai dipotong di Langkah 1
                 const genBtn = document.getElementById("generateScriptBtn");
                 if (genBtn) {
-                    genBtn.disabled = false;
-                    genBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                    genBtn.disabled = true;
+                    genBtn.classList.add("opacity-60", "cursor-not-allowed");
+                }
+                const badge = document.getElementById("scriptReadyBadge");
+                if (badge) {
+                    badge.innerHTML = `<i class="fa-solid fa-clock mr-1"></i> Potong Video di Langkah 1 Dulu`;
+                    badge.className = "self-start sm:self-auto text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 font-bold whitespace-nowrap";
                 }
 
-                updateStatusBadge("Video Siap • Bebas Pilih Naskah / Potong", "emerald");
-                showToast(`Video "${file.name}" berhasil dimuat! Anda bisa langsung buat Naskah dari video mentah ATAU potong anti-copyright dulu.`, "success");
+                updateStatusBadge("Video Siap • Mulai Potong Anti-Copyright", "amber");
+                showToast(`Video "${file.name}" berhasil dimuat! Klik tombol 'Mulai Potong Video Anti-Copyright' di Langkah 1.`, "info");
             };
         }
 
@@ -1190,13 +1190,25 @@
                 // Tampilkan Strip Visual di UI untuk dibaca AI Vision
                 renderFramesPreviewStrip();
 
-                // Update Status UI ke Langkah 2
+                // Update Status UI ke Langkah 2 & Aktifkan Tombol Generate Naskah
                 document.getElementById("crStatusLabel").textContent = "Video Klip Siap ✓";
                 document.getElementById("crStatusLabel").className = "text-xs font-bold text-emerald-400";
-                document.getElementById("generateScriptBtn").disabled = false;
+                
+                const scriptGenBtn = document.getElementById("generateScriptBtn");
+                if (scriptGenBtn) {
+                    scriptGenBtn.disabled = false;
+                    scriptGenBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                }
+
+                const scriptReadyBadge = document.getElementById("scriptReadyBadge");
+                if (scriptReadyBadge) {
+                    scriptReadyBadge.innerHTML = `<i class="fa-solid fa-circle-check mr-1 text-emerald-400"></i> ✓ Siap (${appState.extractedFrames.length} Klip Anti-CR Terdeteksi)`;
+                    scriptReadyBadge.className = "self-start sm:self-auto text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 font-bold whitespace-nowrap";
+                }
+
                 setActiveStep(2);
                 updateStatusBadge("Klip Siap • Lanjut Generate Naskah", "emerald");
-                showToast(`Video alur cerita berhasil dipotong! Total durasi: ${formatTime(totalSecondsRecorded)} siap edit di CapCut.`, "success");
+                showToast(`Video alur cerita berhasil dipotong (${appState.extractedFrames.length} klip)! Sekarang lanjut ke Langkah 2 untuk membuat naskah yang 100% sinkron.`, "success");
 
             } catch (err) {
                 console.error(err);
@@ -1264,108 +1276,7 @@
         // ==========================================
         // LANGKAH 2: GENERATE NASKAH ALUR CERITA VISUAL (GEMINI VISION)
         // ==========================================
-                // Ubah badge dan style pilihan sumber analisis naskah
-        function updateScriptSourceMode() {
-            const isRaw = document.getElementById("srcModeRaw")?.checked;
-            const badge = document.getElementById("scriptSourceBadge");
-            const labelRaw = document.getElementById("labelSrcRaw");
-            const labelAc = document.getElementById("labelSrcAc");
-
-            if (isRaw) {
-                if (badge) {
-                    badge.textContent = "⚡ Video Mentah (Instan)";
-                    badge.className = "text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold";
-                }
-                if (labelRaw) {
-                    labelRaw.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900 border border-indigo-500/50 cursor-pointer text-zinc-200 transition";
-                }
-                if (labelAc) {
-                    labelAc.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 cursor-pointer text-zinc-400 transition";
-                }
-            } else {
-                if (badge) {
-                    badge.textContent = "🛡️ Hasil Anti-CR";
-                    badge.className = "text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 font-bold";
-                }
-                if (labelRaw) {
-                    labelRaw.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 border border-zinc-800 cursor-pointer text-zinc-400 transition";
-                }
-                if (labelAc) {
-                    labelAc.className = "flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900 border border-indigo-500/50 cursor-pointer text-zinc-200 transition";
-                }
-            }
-        }
-
-        // Ekstraksi cepat 20 keyframe visual langsung dari video mentah (~2 detik)
-        async function extractKeyframesFromRawVideo() {
-            return new Promise(async (resolve, reject) => {
-                let hiddenVid = null;
-                try {
-                    hiddenVid = document.createElement("video");
-                    hiddenVid.src = appState.videoUrl;
-                    hiddenVid.muted = true;
-                    hiddenVid.playsInline = true;
-                    hiddenVid.style.position = "fixed";
-                    hiddenVid.style.left = "-9999px";
-                    hiddenVid.style.top = "-9999px";
-                    hiddenVid.style.width = "320px";
-                    hiddenVid.style.height = "180px";
-                    hiddenVid.style.opacity = "0.01";
-                    document.body.appendChild(hiddenVid);
-
-                    await new Promise((res, rej) => {
-                        hiddenVid.onloadeddata = res;
-                        hiddenVid.onerror = rej;
-                    });
-
-                    const canvas = document.getElementById("processingCanvas");
-                    const ctx = canvas.getContext("2d");
-                    const targetW = 640;
-                    const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
-                    let targetH = Math.round(targetW * aspect);
-                    if (targetH % 2 !== 0) targetH += 1;
-                    canvas.width = targetW;
-                    canvas.height = targetH;
-
-                    const duration = hiddenVid.duration;
-                    const numKeyframes = 20; // 20 adegan kunci sepanjang film
-                    const step = Math.max(1, (duration - 2) / numKeyframes);
-                    const timestamps = [];
-                    for (let i = 0; i < numKeyframes; i++) {
-                        timestamps.push(Math.min(duration - 0.5, 0.5 + i * step));
-                    }
-
-                    appState.extractedFrames = [];
-
-                    for (let i = 0; i < timestamps.length; i++) {
-                        const t = timestamps[i];
-                        hiddenVid.currentTime = t;
-                        await new Promise((res) => {
-                            const onSeek = () => { hiddenVid.removeEventListener("seeked", onSeek); res(); };
-                            hiddenVid.addEventListener("seeked", onSeek);
-                        });
-                        ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
-                        const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
-                        appState.extractedFrames.push({
-                            clipIndex: i + 1,
-                            seconds: t,
-                            timeFormatted: formatTime(t),
-                            dataUrl,
-                            base64: dataUrl.split(",")[1]
-                        });
-                    }
-
-                    renderFramesPreviewStrip();
-                    resolve();
-                } catch (err) {
-                    reject(err);
-                } finally {
-                    if (hiddenVid && hiddenVid.parentNode) {
-                        hiddenVid.parentNode.removeChild(hiddenVid);
-                    }
-                }
-            });
-        }
+        // Naskah dibuat murni berdasarkan hasil potongan klip video anti-copyright
 
         async function generateVisualScript() {
             if (!getActiveApiKey()) {
@@ -1379,7 +1290,12 @@
                 return;
             }
 
-            const isRawSource = document.getElementById("srcModeRaw")?.checked;
+            if (!appState.extractedFrames || appState.extractedFrames.length === 0) {
+                showToast("Potong video anti-copyright di Langkah 1 terlebih dahulu agar naskah sinkron dengan video!", "warning");
+                setActiveStep(1);
+                return;
+            }
+
             const overlay = document.getElementById("scriptLoadingOverlay");
             const genBtn = document.getElementById("generateScriptBtn");
             const targetMinutes = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
@@ -1400,25 +1316,22 @@
             genBtn.disabled = true;
 
             try {
-                // Jika user memilih mode Video Mentah ATAU belum pernah dipotong anti-copyright:
-                if (isRawSource || appState.extractedFrames.length === 0) {
-                    updateStatusBadge("Membaca Visual Video Mentah...", "indigo");
-                    const titleP = overlay.querySelector("p.text-sm") || overlay.querySelector("p");
-                    const subP = overlay.querySelector("p.text-xs");
-                    if (titleP) titleP.textContent = "Mengekstrak adegan dari video mentah...";
-                    if (subP) subP.textContent = "Menganalisis 20 adegan kunci secara instan (~2 detik)...";
-                    await extractKeyframesFromRawVideo();
-                }
-
-                updateStatusBadge(`AI Menulis Naskah ~${targetMinutes} Menit...`, "indigo");
+                updateStatusBadge(`AI Menganalisis ${appState.extractedFrames.length} Klip Anti-CR...`, "indigo");
                 const titleP = overlay.querySelector("p.text-sm") || overlay.querySelector("p");
                 const subP = overlay.querySelector("p.text-xs");
                 if (titleP) titleP.textContent = "Gemini AI sedang menulis naskah alur cerita...";
-                if (subP) subP.textContent = `Menyusun 6 babak sinematik (~2.500 kata untuk ${targetMinutes} menit bicara)...`;
+                if (subP) subP.textContent = `Menyelaraskan ${appState.extractedFrames.length} klip video anti-copyright dengan narasi (~2.500 kata untuk ${targetMinutes} menit)...`;
+                
                 const parts = [
                     {
                         text: `Kamu adalah master scriptwriter profesional untuk channel YouTube Alur Cerita Film ternama di Indonesia.
-TUGAS UTAMA: Tulis naskah narasi alur cerita film LENGKAP & MENDALAM dalam Bahasa Indonesia yang sinkron 100% dengan urutan visual keyframe yang dilampirkan.
+TUGAS UTAMA: Tulis naskah narasi alur cerita film LENGKAP & MENDALAM dalam Bahasa Indonesia yang SINKRON 100% SECARA KRONOLOGIS DENGAN SETIAP POTONGAN KLIP VIDEO ANTI-COPYRIGHT YANG DILAMPIRKAN.
+
+PENTING UNTUK SINKRONISASI EDITING DI CAPCUT:
+Gambar-gambar visual di bawah ini adalah TEPAT cuplikan dari masing-masing klip video yang SUDAH DIPOTONG dan digabungkan menjadi file video final anti-copyright.
+Kreator akan langsung memasukkan file video hasil potongan dan audio suara TTS kamu ke CapCut. 
+Oleh karena itu, narasi cerita HARUS MENGALIR PERSIS MENGIKUTI PERJALANAN ADEGAN DARI KLIP #1 SAMPAI KLIP TERAKHIR, sehingga ketika audio narasi diputar, apa yang sedang dibicarakan narator SINKRON DENGAN ADEGAN DI KLIP TERSEBUT tanpa perlu mencari-cari manual potongan klipnya!
+
 TARGET DURASI BACA: Sekitar ${targetMinutes} MENIT (Target kata: ${targetWords - 200} sampai ${targetWords + 400} kata padat, mendalam, dan mengalir).
 
 GAYA BAHASA NARATOR: ${styleDescriptions[styleValue]}
