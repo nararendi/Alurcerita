@@ -467,6 +467,18 @@
                                 <span>Copy Teks Caption</span>
                             </button>
                         </div>
+
+                        <!-- Baris Resume Jika Audio Tersimpan Parsial -->
+                        <div id="ttsResumeRow" class="hidden flex flex-col sm:flex-row gap-2 pt-2 border-t border-zinc-800">
+                            <button id="resumeTtsBtn" onclick="generateVoiceOver(true)" class="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition shadow">
+                                <i class="fa-solid fa-play"></i>
+                                <span id="resumeTtsBtnText">Lanjutkan Sisa Bagian Audio</span>
+                            </button>
+                            <button onclick="openApiKeyModal()" class="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-key text-amber-400"></i>
+                                <span>Ganti API Key</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -497,7 +509,10 @@
             generatedScriptText: "",
             sceneBreakdowns: [],
             audioBlobUrl: null,
-            stopRequested: false
+            stopRequested: false,
+            completedPcmChunks: [], // Simpan sampel audio yang sudah sukses per bagian
+            ttsChunksList: [],      // Daftar teks per bagian (~480 kata)
+            ttsSampleRate: 24000
         };
 
         // Ambil API Key aktif (prioritas: localStorage user -> konstanta kode jika valid AIzaSy)
@@ -1684,7 +1699,7 @@ Berikut adalah urutan potongan gambar visual dari video film:`
         // ==========================================
         // LANGKAH 3: GENERATE SUARA NARATOR (GEMINI TTS -> WAV)
         // ==========================================
-        async function generateVoiceOver() {
+        async function generateVoiceOver(isResume = false) {
             if (!getActiveApiKey()) {
                 showToast("Masukkan dulu Gemini API Key di tombol 'Set API Key' kanan atas bro!", "warning");
                 openApiKeyModal();
@@ -1702,11 +1717,13 @@ Berikut adalah urutan potongan gambar visual dari video film:`
             const ttsBtn = document.getElementById("generateTtsBtn");
             const loadingBox = document.getElementById("ttsLoadingBox");
             const resultBox = document.getElementById("audioResultBox");
+            const resumeRow = document.getElementById("ttsResumeRow");
+            const resumeBtnText = document.getElementById("resumeTtsBtnText");
 
             ttsBtn.disabled = true;
             ttsBtn.classList.add("opacity-60", "cursor-not-allowed");
             loadingBox.classList.remove("hidden");
-            resultBox.classList.add("hidden");
+            if (resumeRow) resumeRow.classList.add("hidden");
 
             // Mapping gaya intonasi ke speechMetadata (BUKAN dimasukkan ke dalam teks naskah yang dibaca)
             const styleMetadataMap = {
@@ -1718,19 +1735,49 @@ Berikut adalah urutan potongan gambar visual dari video film:`
             };
             const styleDirective = styleMetadataMap[styleValue] || "engaging film storyteller";
 
-            // Menyimpan model & payload yang terbukti berhasil agar tidak buang kuota mencoba ulang
+            // Inisialisasi daftar chunks teks (~480 kata per chunk)
+            if (!isResume || !appState.ttsChunksList || appState.ttsChunksList.length === 0) {
+                appState.ttsChunksList = chunkTextForTTS(scriptText, 480);
+                appState.completedPcmChunks = [];
+            }
+
+            const textChunks = appState.ttsChunksList;
+            const startIdx = isResume ? appState.completedPcmChunks.length : 0;
+            let detectedSampleRate = appState.ttsSampleRate || 24000;
+
             let confirmedWorkingModel = null;
             let confirmedPayloadIdx = null;
 
-            const allPcmChunks = [];
-            let detectedSampleRate = 24000;
+            const progressTextEl = loadingBox.querySelector("p.text-xs") || loadingBox.querySelector("p");
+
+            // Fungsi pembantu untuk membuat master WAV dari chunk yang ada
+            function buildAndMountMasterWav(chunks, sampleRate, isComplete = false) {
+                if (chunks.length === 0) return 0;
+                const totalSamples = chunks.reduce((acc, c) => acc + c.length, 0);
+                const masterPcm = new Int16Array(totalSamples);
+                let offset = 0;
+                for (const chunk of chunks) {
+                    masterPcm.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                const wavBlob = pcmToWav(masterPcm, sampleRate);
+                if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
+                appState.audioBlobUrl = URL.createObjectURL(wavBlob);
+
+                const player = document.getElementById("ttsAudioPlayer");
+                const dlAudioBtn = document.getElementById("downloadAudioBtn");
+                player.src = appState.audioBlobUrl;
+                dlAudioBtn.href = appState.audioBlobUrl;
+
+                const totalAudioSec = Math.round(totalSamples / sampleRate);
+                const statusSuffix = isComplete ? "" : ` (Tersimpan ${chunks.length}/${textChunks.length} Bagian)`;
+                document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName}${statusSuffix} • Durasi: ${formatTime(totalAudioSec)}`;
+                resultBox.classList.remove("hidden");
+                return totalAudioSec;
+            }
 
             try {
-                // Pecah teks naskah secara presisi berdasarkan kalimat (~150 kata per chunk untuk efisiensi request)
-                const textChunks = chunkTextForTTS(scriptText, 150);
-                const progressTextEl = loadingBox.querySelector("p.text-xs") || loadingBox.querySelector("p");
-
-                for (let idx = 0; idx < textChunks.length; idx++) {
+                for (let idx = startIdx; idx < textChunks.length; idx++) {
                     const chunkText = textChunks[idx];
                     const pct = Math.round(((idx + 1) / textChunks.length) * 100);
                     updateStatusBadge(`Merekam Suara Bagian ${idx + 1}/${textChunks.length}...`, "indigo");
@@ -1738,12 +1785,11 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                         progressTextEl.textContent = `Merekam suara narator bagian ${idx + 1} dari ${textChunks.length} (${pct}%)...`;
                     }
 
-                    // Jeda sopan 1.5 detik antar request untuk menghindari limit 15 RPM
-                    if (idx > 0) {
-                        await new Promise(res => setTimeout(res, 1500));
+                    // Jeda 2 detik antar request agar tidak memicu pembatasan 15 RPM
+                    if (idx > startIdx) {
+                        await new Promise(res => setTimeout(res, 2000));
                     }
 
-                    // Siapkan variasi payload kompatibel
                     const buildPayloads = (text) => [
                         {
                             contents: [{
@@ -1800,7 +1846,6 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     let result = null;
                     let lastTtsErr = null;
 
-                    // Daftar model yang dicoba (prioritaskan model yang sudah terbukti berhasil di chunk sebelumnya)
                     const modelsToTry = confirmedWorkingModel ? [confirmedWorkingModel] : CANDIDATE_TTS_MODELS;
 
                     for (const ttsModel of modelsToTry) {
@@ -1849,75 +1894,43 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                     const rateMatch = (mimeType || "").match(/rate=(\d+)/);
                     if (rateMatch && rateMatch[1]) {
                         detectedSampleRate = parseInt(rateMatch[1], 10);
+                        appState.ttsSampleRate = detectedSampleRate;
                     }
 
                     const rawBuffer = base64ToArrayBuffer(audioData);
                     const extracted = extractPcmSamples(rawBuffer);
                     if (extracted.sampleRate) {
                         detectedSampleRate = extracted.sampleRate;
+                        appState.ttsSampleRate = detectedSampleRate;
                     }
                     if (extracted.pcm16 && extracted.pcm16.length > 0) {
-                        allPcmChunks.push(extracted.pcm16);
+                        appState.completedPcmChunks.push(extracted.pcm16);
+                        // Mount audio secara live setelah setiap potongan selesai
+                        buildAndMountMasterWav(appState.completedPcmChunks, detectedSampleRate, false);
                     }
                 }
 
-                if (allPcmChunks.length === 0) {
-                    throw new Error("Gagal mengekstrak sampel audio narator.");
-                }
-
-                // Gabungkan seluruh sampel PCM16 menjadi satu master audio tanpa jeda
-                const totalSamples = allPcmChunks.reduce((acc, c) => acc + c.length, 0);
-                const masterPcm = new Int16Array(totalSamples);
-                let offset = 0;
-                for (const chunk of allPcmChunks) {
-                    masterPcm.set(chunk, offset);
-                    offset += chunk.length;
-                }
-
-                const wavBlob = pcmToWav(masterPcm, detectedSampleRate);
-
-                if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
-                appState.audioBlobUrl = URL.createObjectURL(wavBlob);
-
-                const player = document.getElementById("ttsAudioPlayer");
-                const dlAudioBtn = document.getElementById("downloadAudioBtn");
-                player.src = appState.audioBlobUrl;
-                dlAudioBtn.href = appState.audioBlobUrl;
-
-                const totalAudioSec = Math.round(totalSamples / detectedSampleRate);
-                document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName} • Durasi: ${formatTime(totalAudioSec)}`;
-                resultBox.classList.remove("hidden");
-
+                // Selesai 100%!
+                const totalSec = buildAndMountMasterWav(appState.completedPcmChunks, detectedSampleRate, true);
                 updateStatusBadge("Semua Siap Upload YouTube!", "emerald");
-                showToast(`Suara narator (${formatTime(totalAudioSec)}) berhasil dibuat! Siap download .WAV dan pasang di CapCut.`, "success");
+                showToast(`Suara narator lengkap (${formatTime(totalSec)}) berhasil dibuat! Siap download .WAV dan pasang di CapCut.`, "success");
 
             } catch (err) {
                 console.error(err);
 
-                // Penyelamatan audio parsial: Jika sempat berhasil sebagian (misal 10 dari 19 bagian), jangan buang hasilnya!
-                if (allPcmChunks.length > 0) {
-                    const totalSamples = allPcmChunks.reduce((acc, c) => acc + c.length, 0);
-                    const masterPcm = new Int16Array(totalSamples);
-                    let offset = 0;
-                    for (const chunk of allPcmChunks) {
-                        masterPcm.set(chunk, offset);
-                        offset += chunk.length;
+                if (appState.completedPcmChunks.length > 0) {
+                    const totalSec = buildAndMountMasterWav(appState.completedPcmChunks, detectedSampleRate, false);
+                    
+                    // Aktifkan baris tombol Lanjutkan
+                    if (resumeRow) {
+                        resumeRow.classList.remove("hidden");
+                        if (resumeBtnText) {
+                            resumeBtnText.textContent = `▶️ Lanjutkan Bagian ${appState.completedPcmChunks.length + 1} dari ${textChunks.length}`;
+                        }
                     }
-                    const wavBlob = pcmToWav(masterPcm, detectedSampleRate);
-                    if (appState.audioBlobUrl) URL.revokeObjectURL(appState.audioBlobUrl);
-                    appState.audioBlobUrl = URL.createObjectURL(wavBlob);
 
-                    const player = document.getElementById("ttsAudioPlayer");
-                    const dlAudioBtn = document.getElementById("downloadAudioBtn");
-                    player.src = appState.audioBlobUrl;
-                    dlAudioBtn.href = appState.audioBlobUrl;
-
-                    const totalAudioSec = Math.round(totalSamples / detectedSampleRate);
-                    document.getElementById("audioVoiceBadge").textContent = `Suara: ${voiceName} (Tersimpan ${allPcmChunks.length} Bagian) • Durasi: ${formatTime(totalAudioSec)}`;
-                    resultBox.classList.remove("hidden");
-
-                    showToast(`Terselamatkan ${allPcmChunks.length} bagian audio (${formatTime(totalAudioSec)}). Kendala: ${err.message}`, "warning");
-                    updateStatusBadge(`Tersimpan ${allPcmChunks.length} Bagian Audio`, "amber");
+                    showToast(`Tersimpan ${appState.completedPcmChunks.length}/${textChunks.length} bagian audio (${formatTime(totalSec)}). Klik tombol 'Lanjutkan' di bawah untuk menyambung sisa bagian!`, "warning");
+                    updateStatusBadge(`Tersimpan ${appState.completedPcmChunks.length} Bagian Audio`, "amber");
                 } else {
                     showToast("Gagal generate suara TTS: " + err.message, "error");
                     updateStatusBadge("Gagal Generate TTS", "zinc");
@@ -1929,8 +1942,10 @@ Berikut adalah urutan potongan gambar visual dari video film:`
             }
         }
 
-        // Pemecah teks naskah menjadi blok kalimat (~120 kata per chunk) agar aman untuk batas token output TTS
-        function chunkTextForTTS(text, maxWordsPerChunk = 150) {
+        // Pecah teks naskah menjadi blok paragraf/kalimat optimal (~480 kata per chunk)
+        // Gemini 3.8 Flash TTS mendukung hingga 8.192 token input dan 16.384 token output (~10.9 menit per request).
+        // Dengan 480 kata per chunk, naskah 20 menit hanya butuh 4-5 request total (jauh di bawah batas 15 RPM).
+        function chunkTextForTTS(text, maxWordsPerChunk = 480) {
             const rawParagraphs = text.split(/\n+/).map(p => p.trim()).filter(Boolean);
             const sentences = [];
             for (const para of rawParagraphs) {
