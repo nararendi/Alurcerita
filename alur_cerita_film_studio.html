@@ -1557,13 +1557,15 @@ Berikut adalah urutan potongan gambar visual dari video film:`
             loadingBox.classList.remove("hidden");
             resultBox.classList.add("hidden");
 
-            const tonePrompts = {
-                santai_gaul: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan gaya santai, energik, asik khas YouTuber gaul, intonasi dinamis dan ekspresif:",
-                dramatis_sinematik: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada dramatis, mendalam, penuh penghayatan emosional dan berbobot:",
-                misterius_horor: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada misterius, menegangkan, pelan namun menusuk, penuh rasa penasaran:",
-                komedi_absurd: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan nada ceria, jenaka, santai, dan menghibur:",
-                dokumenter_formal: "Bacakan naskah alur cerita film berikut dalam bahasa Indonesia dengan artikulasi jelas, tempo stabil, formal, dan berwibawa:"
+            // Mapping gaya intonasi ke speechMetadata (BUKAN dimasukkan ke dalam teks naskah yang dibaca)
+            const styleMetadataMap = {
+                santai_gaul: "energetic Indonesian YouTuber storyteller, casual, expressive, engaging",
+                dramatis_sinematik: "dramatic cinematic film narrator, emotional, deep, epic",
+                misterius_horor: "suspenseful thriller narrator, tense, eerie, mysterious",
+                komedi_absurd: "cheerful witty storyteller, playful, humorous, lively",
+                dokumenter_formal: "clear articulation, formal, authoritative documentary narrator"
             };
+            const styleDirective = styleMetadataMap[styleValue] || "engaging film storyteller";
 
             try {
                 // Pecah teks naskah secara presisi berdasarkan kalimat (~120 kata per chunk)
@@ -1581,18 +1583,24 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                         progressTextEl.textContent = `Merekam suara narator bagian ${idx + 1} dari ${textChunks.length} (${pct}%)...`;
                     }
 
-                    const promptText = `${tonePrompts[styleValue] || "Bacakan dengan gaya narator film:"}\n\n${chunkText}`;
-                    
+                    // PENTING: Jangan masukkan kalimat perintah seperti "Bacakan naskah berikut:" ke dalam text!
+                    // Model TTS membaca persis huruf demi huruf yang ada di 'text'. Masukkan murni teks naskah saja!
                     let result = null;
                     let lastTtsErr = null;
 
                     for (const ttsModel of CANDIDATE_TTS_MODELS) {
                         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${getActiveApiKey()}`;
                         
-                        // Coba format voiceConfig kompatibel (tanpa field 'model' di body)
+                        // Coba format voiceConfig kompatibel (dengan speechMetadata & fallback murni text)
                         const payloadsToTry = [
                             {
-                                contents: [{ role: "user", parts: [{ text: promptText }] }],
+                                contents: [{
+                                    role: "user",
+                                    parts: [{
+                                        text: chunkText,
+                                        speechMetadata: { style: styleDirective }
+                                    }]
+                                }],
                                 generationConfig: {
                                     responseModalities: ["AUDIO"],
                                     speechConfig: {
@@ -1603,12 +1611,34 @@ Berikut adalah urutan potongan gambar visual dari video film:`
                                 }
                             },
                             {
-                                contents: [{ role: "user", parts: [{ text: promptText }] }],
+                                contents: [{
+                                    role: "user",
+                                    parts: [{
+                                        text: chunkText,
+                                        speechMetadata: { style: styleDirective }
+                                    }]
+                                }],
                                 generationConfig: {
                                     responseModalities: ["AUDIO"],
                                     speechConfig: {
                                         voiceConfig: {
                                             voice: voiceName
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                contents: [{
+                                    role: "user",
+                                    parts: [{
+                                        text: chunkText
+                                    }]
+                                }],
+                                generationConfig: {
+                                    responseModalities: ["AUDIO"],
+                                    speechConfig: {
+                                        voiceConfig: {
+                                            prebuiltVoiceConfig: { voiceName: voiceName }
                                         }
                                     }
                                 }
