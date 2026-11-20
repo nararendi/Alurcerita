@@ -786,6 +786,87 @@
             };
         }
 
+        // ==========================================
+        // BACKGROUND PROCESSING KEEPALIVE ENGINE
+        // Mencegah browser (Chrome/Edge) membekukan tab saat pengguna pindah ke tab lain
+        // ==========================================
+        let bgAudioCtx = null;
+        function startBackgroundAudioKeepalive() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                if (!bgAudioCtx) {
+                    bgAudioCtx = new AudioCtx();
+                    const osc = bgAudioCtx.createOscillator();
+                    const gain = bgAudioCtx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(20, bgAudioCtx.currentTime); // Inaudible frequency
+                    gain.gain.setValueAtTime(0.00001, bgAudioCtx.currentTime); // Nyaris 0, tak terdengar
+                    osc.connect(gain);
+                    gain.connect(bgAudioCtx.destination);
+                    osc.start();
+                }
+                if (bgAudioCtx.state === 'suspended') {
+                    bgAudioCtx.resume();
+                }
+            } catch (e) {
+                console.warn("Background audio keepalive:", e);
+            }
+        }
+
+        function stopBackgroundAudioKeepalive() {
+            try {
+                if (bgAudioCtx) {
+                    bgAudioCtx.close();
+                    bgAudioCtx = null;
+                }
+            } catch (e) {}
+        }
+
+        // Web Worker Ticker: Timer di Web Worker kebal dari background tab throttling browser
+        let bgTickerWorker = null;
+        function getBackgroundTicker() {
+            if (!bgTickerWorker) {
+                const workerCode = `
+                    let timer = null;
+                    self.onmessage = function(e) {
+                        if (e.data === 'start') {
+                            if (timer) clearInterval(timer);
+                            timer = setInterval(() => self.postMessage('tick'), 25);
+                        } else if (e.data === 'stop') {
+                            if (timer) clearInterval(timer);
+                            timer = null;
+                        }
+                    };
+                `;
+                const blob = new Blob([workerCode], { type: "application/javascript" });
+                bgTickerWorker = new Worker(URL.createObjectURL(blob));
+            }
+            return bgTickerWorker;
+        }
+
+        function stopBackgroundTicker() {
+            if (bgTickerWorker) {
+                bgTickerWorker.postMessage('stop');
+            }
+        }
+
+        // Screen Wake Lock
+        let screenWakeLock = null;
+        async function acquireWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    screenWakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (e) {}
+        }
+        function releaseWakeLock() {
+            if (screenWakeLock) {
+                screenWakeLock.release().catch(() => {});
+                screenWakeLock = null;
+            }
+        }
+
         // Helper untuk menunggu hingga video berpindah waktu (seeked)
         function seekVideo(video, time) {
             return new Promise((res) => {
@@ -798,12 +879,40 @@
             });
         }
 
-        // Helper untuk sinkronisasi render frame video berikutnya
+        // Helper untuk sinkronisasi render frame video berikutnya (Aman untuk Background Tab!)
         function waitForNextVideoFrame(video) {
-            if ('requestVideoFrameCallback' in video) {
-                return new Promise((res) => video.requestVideoFrameCallback(res));
-            }
-            return new Promise((res) => requestAnimationFrame(res));
+            return new Promise((resolve) => {
+                let finished = false;
+                const done = () => {
+                    if (!finished) {
+                        finished = true;
+                        resolve();
+                    }
+                };
+
+                // Jika tab sedang aktif/terlihat, gunakan requestVideoFrameCallback untuk sinkronisasi frame
+                if (!document.hidden && 'requestVideoFrameCallback' in video) {
+                    video.requestVideoFrameCallback(done);
+                } else if (!document.hidden && 'requestAnimationFrame' in window) {
+                    requestAnimationFrame(done);
+                }
+
+                // Jika di background tab, tangkap tick dari Web Worker agar loop tidak pernah membeku
+                const worker = getBackgroundTicker();
+                const onWorkerTick = (e) => {
+                    if (e.data === 'tick') {
+                        worker.removeEventListener('message', onWorkerTick);
+                        done();
+                    }
+                };
+                worker.addEventListener('message', onWorkerTick);
+
+                // Cadangan timeout 40ms jika worker belum merespon
+                setTimeout(() => {
+                    worker.removeEventListener('message', onWorkerTick);
+                    done();
+                }, 40);
+            });
         }
 
         // Update keterangan UI target durasi
@@ -861,6 +970,11 @@
             appState.stopRequested = false;
             updateStatusBadge("Merekam Alur Cerita YouTube...", "indigo");
 
+            // Aktifkan Background Tab Keepalive & Worker Ticker agar proses tetap jalan saat pindah tab
+            startBackgroundAudioKeepalive();
+            getBackgroundTicker().postMessage('start');
+            acquireWakeLock();
+
             const optCut3s = document.getElementById("optCut3s").checked;
             const optZoom = document.getElementById("optZoom").checked;
             const optColorSpeed = document.getElementById("optColorSpeed").checked;
@@ -870,19 +984,20 @@
 
             let hiddenVid = null;
             try {
-                // 1. Buat elemen video yang terpasang di DOM (offscreen) agar compositor browser memproses decode frame asli
+                // 1. Buat elemen video yang terpasang di dalam viewport (opacity 0.01) agar browser tidak menghentikan decode saat pindah tab
                 hiddenVid = document.createElement("video");
                 hiddenVid.src = appState.videoUrl;
                 hiddenVid.muted = true;
                 hiddenVid.playsInline = true;
                 hiddenVid.preload = "auto";
                 hiddenVid.style.position = "fixed";
-                hiddenVid.style.left = "-9999px";
-                hiddenVid.style.top = "-9999px";
-                hiddenVid.style.width = "320px";
-                hiddenVid.style.height = "180px";
+                hiddenVid.style.bottom = "0px";
+                hiddenVid.style.right = "0px";
+                hiddenVid.style.width = "4px";
+                hiddenVid.style.height = "4px";
                 hiddenVid.style.opacity = "0.01";
                 hiddenVid.style.pointerEvents = "none";
+                hiddenVid.style.zIndex = "-1";
                 document.body.appendChild(hiddenVid);
 
                 await new Promise((resolve, reject) => {
@@ -1040,11 +1155,22 @@
                     while (frameInClip < targetFramesPerClip && !hiddenVid.ended && hiddenVid.currentTime < clipEndTime + 0.3) {
                         if (appState.stopRequested) break;
                         if (encoderError) throw encoderError;
+
+                        // Pastikan video tetap berjalan jika dijeda oleh browser di background
+                        if (hiddenVid.paused) {
+                            try { hiddenVid.play(); } catch(e){}
+                        }
+
                         await waitForNextVideoFrame(hiddenVid);
 
-                        if (hiddenVid.currentTime === lastTime) {
+                        // Tangani jika di background tab browser menunda update waktu video
+                        if (Math.abs(hiddenVid.currentTime - lastTime) < 0.005) {
                             duplicateCount++;
-                            if (duplicateCount > 25) break;
+                            if (duplicateCount > 5) {
+                                // Dorong currentTime maju 1 frame agar video decode terus berjalan
+                                hiddenVid.currentTime = Math.min(clipEndTime, hiddenVid.currentTime + (1 / fps));
+                                duplicateCount = 0;
+                            }
                         } else {
                             duplicateCount = 0;
                             lastTime = hiddenVid.currentTime;
@@ -1109,6 +1235,11 @@
                         while (rCount < replayFrames && !hiddenVid.ended) {
                             if (appState.stopRequested) break;
                             if (encoderError) throw encoderError;
+
+                            if (hiddenVid.paused) {
+                                try { hiddenVid.play(); } catch(e){}
+                            }
+
                             await waitForNextVideoFrame(hiddenVid);
 
                             ctx.save();
@@ -1215,6 +1346,10 @@
                 showToast("Terjadi kendala saat memproses video: " + err.message, "error");
                 updateStatusBadge("Gagal Memproses", "zinc");
             } finally {
+                stopBackgroundAudioKeepalive();
+                stopBackgroundTicker();
+                releaseWakeLock();
+
                 if (hiddenVid && hiddenVid.parentNode) {
                     hiddenVid.parentNode.removeChild(hiddenVid);
                 }
