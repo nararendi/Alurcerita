@@ -347,18 +347,6 @@
                                 </button>
                             </div>
 
-                            <!-- Hasil Download Video Anti-Copyright -->
-                            <div id="processedVideoResult" class="hidden mt-4 pt-3 border-t border-zinc-800 flex flex-col gap-2">
-                                <div class="flex items-center justify-between text-xs text-emerald-400 font-medium">
-                                    <span><i class="fa-solid fa-circle-check mr-1"></i> Video Anti-Copyright Siap!</span>
-                                    <span id="clipSummaryBadge" class="text-zinc-400"></span>
-                                </div>
-                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.mp4" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
-                                    <i class="fa-solid fa-file-video text-sm"></i>
-                                    <span>Download Video Hasil Potongan (MP4 Siap CapCut)</span>
-                                </a>
-                            </div>
-
                             <!-- Panel Analitik Hook Video (Live saat proses & Ringkasan Akhir) -->
                             <div id="hookAnalyticsBox" class="hidden mt-4 pt-3 border-t border-zinc-800/90 flex flex-col gap-3">
                                 <div class="flex items-center justify-between">
@@ -394,6 +382,28 @@
                                         <div id="hookTopList" class="space-y-1.5"></div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Preview Video Gabungan Lengkap + Tombol Download di Bawah -->
+                            <div id="processedVideoResult" class="hidden mt-4 pt-3 border-t border-zinc-800 flex flex-col gap-3">
+                                <div class="flex items-center justify-between text-xs text-emerald-400 font-medium">
+                                    <span><i class="fa-solid fa-clapperboard mr-1"></i> Preview Video Jadi (Template Terpilih)</span>
+                                    <span id="clipSummaryBadge" class="text-zinc-400"></span>
+                                </div>
+
+                                <div class="rounded-xl overflow-hidden bg-black border border-zinc-800 shadow-lg">
+                                    <video id="processedVideoPreview" controls playsinline class="w-full max-h-[420px] object-contain mx-auto bg-black"></video>
+                                </div>
+
+                                <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-info text-indigo-400"></i>
+                                    <span>Hasil download 100% sama dengan preview di atas — semua potongan video sudah jadi satu dalam template & tinggal dipadukan dengan narasi alur cerita.</span>
+                                </div>
+
+                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.mp4" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-emerald-600/20">
+                                    <i class="fa-solid fa-download text-sm"></i>
+                                    <span>Download Video Hasil Jadi (MP4 Siap Upload / CapCut)</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -895,6 +905,11 @@
             document.getElementById("resetBtn").classList.add("hidden");
             document.getElementById("framesPreviewPanel").classList.add("hidden");
             document.getElementById("processedVideoResult").classList.add("hidden");
+            const previewVid = document.getElementById("processedVideoPreview");
+            if (previewVid) {
+                previewVid.removeAttribute("src");
+                previewVid.load();
+            }
             const hookBox = document.getElementById("hookAnalyticsBox");
             if (hookBox) hookBox.classList.add("hidden");
             const hookFinal = document.getElementById("hookFinalSummary");
@@ -1854,6 +1869,12 @@
                     dlBtn.href = appState.processedVideoUrl;
                     dlBtn.download = "alur-cerita-anticopyright.mp4";
 
+                    const previewEl = document.getElementById("processedVideoPreview");
+                    if (previewEl) {
+                        previewEl.src = appState.processedVideoUrl;
+                        previewEl.load();
+                    }
+
                     const mbSize = Math.round(mp4Blob.size / (1024 * 1024));
                     document.getElementById("clipSummaryBadge").textContent = `${appState.extractedFrames.length} Klip • Durasi: ${formatTime(totalSecondsRecorded)} (${mbSize} MB MP4 Normal Speed)`;
                     document.getElementById("processedVideoResult").classList.remove("hidden");
@@ -1868,6 +1889,12 @@
                             const dlBtn = document.getElementById("downloadProcessedVideoBtn");
                             dlBtn.href = appState.processedVideoUrl;
                             dlBtn.download = `alur-cerita-anticopyright.${fallbackExt}`;
+
+                            const previewEl = document.getElementById("processedVideoPreview");
+                            if (previewEl) {
+                                previewEl.src = appState.processedVideoUrl;
+                                previewEl.load();
+                            }
 
                             const mbSize = Math.round(blob.size / (1024 * 1024));
                             document.getElementById("clipSummaryBadge").textContent = `${appState.extractedFrames.length} Klip • Durasi: ${formatTime(totalSecondsRecorded)} (${mbSize} MB)`;
