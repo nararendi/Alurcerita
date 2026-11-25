@@ -273,6 +273,58 @@
                                 </label>
                             </div>
 
+                            <!-- Pilihan Rasio Platform & Template Menarik -->
+                            <div class="mt-3.5 pt-3.5 border-t border-zinc-800/80 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-layer-group text-purple-400"></i> Rasio & Template Video:
+                                    </span>
+                                    <span id="ratioDimsBadge" class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">16:9 YouTube (640x360)</span>
+                                </div>
+
+                                <!-- Tombol Pilih Rasio YouTube vs TikTok -->
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" id="ratioBtn169" onclick="selectAspectRatio('16:9')" class="p-2.5 rounded-xl border-2 border-indigo-500 bg-indigo-500/15 text-left transition">
+                                        <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                            <i class="fa-brands fa-youtube text-rose-400"></i> YouTube (16:9)
+                                        </div>
+                                        <div class="text-[10px] text-zinc-400 mt-0.5">Landscape Full / Cinema</div>
+                                    </button>
+                                    <button type="button" id="ratioBtn916" onclick="selectAspectRatio('9:16')" class="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 text-left transition">
+                                        <div class="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                                            <i class="fa-brands fa-tiktok text-cyan-400"></i> TikTok / Shorts (9:16)
+                                        </div>
+                                        <div class="text-[10px] text-zinc-400 mt-0.5">Portrait + Blur BG Estetik</div>
+                                    </button>
+                                </div>
+
+                                <!-- Pilihan Template Tampilan -->
+                                <div>
+                                    <label for="videoTemplateSelect" class="block text-[11px] font-semibold text-zinc-400 mb-1.5">
+                                        Pilih Desain Template Overlay:
+                                    </label>
+                                    <select id="videoTemplateSelect" onchange="onTemplateChanged()" class="w-full bg-zinc-900 border border-zinc-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-zinc-100 outline-none transition font-medium">
+                                        <option value="viral_header" selected>🔥 Viral Hook Header (Judul Hook Menarik + Blur/Cinema Frame)</option>
+                                        <option value="cinema_gold">🎬 Cinema Breaking / Misteri (Frame Emas + Spoiler Badge)</option>
+                                        <option value="clean_blur">✨ Clean Sinematik (Tanpa Teks Judul, Fokus Visual)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Input Judul Template & Auto-Saran dari Deteksi Hook -->
+                                <div id="templateTitleWrap" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <label for="templateTitleInput" class="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
+                                            <i class="fa-solid fa-heading"></i> Judul di Template (Auto Hook):
+                                        </label>
+                                        <button type="button" onclick="refreshHookTitleSuggestions(true)" class="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-semibold transition flex items-center gap-1">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Saran Hook
+                                        </button>
+                                    </div>
+                                    <input type="text" id="templateTitleInput" placeholder="Otomatis terisi judul menarik dari deteksi hook..." class="w-full bg-studio-950 border border-zinc-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition">
+                                    <div id="hookTitleSuggestions" class="flex flex-wrap gap-1.5"></div>
+                                </div>
+                            </div>
+
                             <!-- Tombol Proses Video & Ekstrak Frame -->
                             <button id="processVideoBtn" onclick="startAntiCopyrightProcess()" class="w-full mt-4 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition active:scale-[0.99]">
                                 <i class="fa-solid fa-scissors"></i>
@@ -451,6 +503,15 @@
                         <textarea id="scriptOutput" rows="10" oninput="updateWordCount()" placeholder="1. Upload file film MP4 di sebelah kiri.&#10;2. Klik 'Potong Anti-Copyright & Baca Visual'.&#10;3. Klik 'Hasilkan Naskah Alur Cerita' untuk mendapatkan naskah yang pas dengan adegan videonya..." class="w-full bg-studio-950 border border-zinc-800 focus:border-indigo-500 rounded-xl p-4 text-sm leading-relaxed text-zinc-100 placeholder-zinc-600 outline-none transition resize-y"></textarea>
                     </div>
 
+                    <!-- Saran Judul Viral AI + Deteksi Hook -->
+                    <div id="viralTitlesBox" class="hidden bg-studio-950/90 border border-amber-500/30 rounded-xl p-4 space-y-2">
+                        <div class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                            <span><i class="fa-solid fa-bolt mr-1"></i> Rekomendasi Judul Viral (Hook + AI)</span>
+                            <span id="viralTitlesPlatformBadge" class="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded font-mono">YouTube / TikTok</span>
+                        </div>
+                        <div id="viralTitlesList" class="space-y-1.5 text-xs"></div>
+                    </div>
+
                     <!-- Rincian Adegan per Timestamp (Sinkronisasi CapCut) -->
                     <div id="sceneBreakdownBox" class="hidden bg-studio-950/80 border border-zinc-800/90 rounded-xl p-4">
                         <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 flex items-center justify-between">
@@ -578,6 +639,8 @@
             processedVideoUrl: null,
             processedVideoDuration: 0,
             hookAnalytics: null,
+            aspectRatio: "16:9",
+            videoTemplate: "viral_header",
             generatedScriptText: "",
             sceneBreakdowns: [],
             audioBlobUrl: null,
@@ -801,7 +864,8 @@
                 }
 
                 updateStatusBadge("Video Siap • Mulai Potong Anti-Copyright", "amber");
-                showToast(`Video "${file.name}" berhasil dimuat! Klik tombol 'Mulai Potong Video Anti-Copyright' di Langkah 1.`, "info");
+                refreshHookTitleSuggestions(true);
+                showToast(`Video "${file.name}" berhasil dimuat! Pilih rasio TikTok/YouTube & template lalu klik 'Potong Anti-Copyright'.`, "info");
             };
         }
 
@@ -818,6 +882,8 @@
                 processedVideoUrl: null,
                 processedVideoDuration: 0,
                 hookAnalytics: null,
+                aspectRatio: appState.aspectRatio || "16:9",
+                videoTemplate: appState.videoTemplate || "viral_header",
                 generatedScriptText: "",
                 sceneBreakdowns: [],
                 audioBlobUrl: null
@@ -833,6 +899,10 @@
             if (hookBox) hookBox.classList.add("hidden");
             const hookFinal = document.getElementById("hookFinalSummary");
             if (hookFinal) hookFinal.classList.add("hidden");
+            const vtBox = document.getElementById("viralTitlesBox");
+            if (vtBox) vtBox.classList.add("hidden");
+            const tplInput = document.getElementById("templateTitleInput");
+            if (tplInput) tplInput.value = "";
             document.getElementById("sceneBreakdownBox").classList.add("hidden");
             document.getElementById("audioResultBox").classList.add("hidden");
             document.getElementById("scriptOutput").value = "";
@@ -840,6 +910,328 @@
             updateWordCount();
             setActiveStep(1);
             updateStatusBadge("Menunggu Video MP4", "zinc");
+        }
+
+        // ==========================================
+        // PENGATURAN RASIO (YOUTUBE 16:9 vs TIKTOK 9:16), TEMPLATE & AUTO JUDUL HOOK
+        // ==========================================
+        function selectAspectRatio(ratio) {
+            appState.aspectRatio = ratio;
+            const btn169 = document.getElementById("ratioBtn169");
+            const btn916 = document.getElementById("ratioBtn916");
+            const badge = document.getElementById("ratioDimsBadge");
+
+            if (ratio === "9:16") {
+                if (btn916) btn916.className = "p-2.5 rounded-xl border-2 border-cyan-500 bg-cyan-500/15 text-left transition";
+                if (btn169) btn169.className = "p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 text-left transition";
+                if (badge) badge.textContent = "9:16 TikTok / Shorts (432x768)";
+            } else {
+                if (btn169) btn169.className = "p-2.5 rounded-xl border-2 border-indigo-500 bg-indigo-500/15 text-left transition";
+                if (btn916) btn916.className = "p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 text-left transition";
+                if (badge) badge.textContent = "16:9 YouTube (640x360)";
+            }
+            refreshHookTitleSuggestions(true);
+        }
+
+        function onTemplateChanged() {
+            const sel = document.getElementById("videoTemplateSelect");
+            const val = sel ? sel.value : "viral_header";
+            appState.videoTemplate = val;
+            const wrap = document.getElementById("templateTitleWrap");
+            if (wrap) {
+                if (val === "clean_blur") {
+                    wrap.classList.add("opacity-50");
+                } else {
+                    wrap.classList.remove("opacity-50");
+                }
+            }
+        }
+
+        function buildHookTitleSuggestions(hookData, ratio, extraCtx = "") {
+            const isPortrait = ratio === "9:16";
+            const cleanCtx = (extraCtx || "").replace(/^(ini\s+film|film)\s+/i, "").trim();
+            const filmHint = cleanCtx && cleanCtx.length <= 28 ? cleanCtx.toUpperCase() : "";
+            const topTag = hookData?.topHooks?.[0]?.hookTag || "";
+            const score = hookData?.overallScore || 0;
+
+            if (isPortrait) {
+                if (topTag.includes("Aksi")) {
+                    return [
+                        filmHint ? `${filmHint}: AKSI PALING GILA YANG BIKIN TEGANG!` : "JANGAN SKIP! AKSI PALING GILA DI FILM INI!",
+                        "DIREMEHKAN DI AWAL, TERNYATA DIA TAK TERKALAHKAN!",
+                        "DETIK-DETIK MEMATIKAN YANG BIKIN MERINDING!"
+                    ];
+                } else if (topTag.includes("Kontras") || topTag.includes("Dramatis")) {
+                    return [
+                        filmHint ? `${filmHint}: PLOT TWIST YANG TAK TERDUGA!` : "AWALNYA BIASA AJA, ENDINGNYA BIKIN MELONGO!",
+                        "RAHASIA GELAP YANG AKHIRNYA TERBONGKAR!",
+                        "SATU KEPUTUSAN YANG MENGUBAH NASIB SELAMANYA!"
+                    ];
+                }
+                return [
+                    filmHint ? `${filmHint}: ALUR CERITA BIKIN PENASARAN!` : "AWALNYA DIREMEHKAN! TERNYATA DIA PUNYA RAHASIA...",
+                    score >= 75 ? "ADEGAN PALING MENEGANGKAN! WAJIB NONTON SAMPAI HABIS" : "ALUR FILM TERBAIK: TAK DISANGKA BERAKHIR BEGINI!",
+                    "CUMA ORANG TELITI YANG SADAR SAMA KEJADIAN INI!"
+                ];
+            } else {
+                if (topTag.includes("Aksi")) {
+                    return [
+                        filmHint ? `ALUR CERITA ${filmHint} — AKSI PALING MENEGANGKAN!` : "ALUR CERITA FILM: DIANGGAP REMEH, TERNYATA DIA TAK TERKALAHKAN!",
+                        "PENUH AKSI! DETIK-DETIK PERTARUNGAN PALING GILA SEPANJANG FILM",
+                        "ALUR FILM LENGKAP: PERJUANGAN HIDUP MATI MELAWAN KEJAHATAN!"
+                    ];
+                } else if (topTag.includes("Kontras") || topTag.includes("Dramatis")) {
+                    return [
+                        filmHint ? `ALUR CERITA ${filmHint} — PENUH PLOT TWIST!` : "ALUR CERITA FILM: PENUH MISTERI & PLOT TWIST YANG TAK TERDUGA!",
+                        "RAHASIA BESAR TERUNGKAP! KISAH DRAMATIS YANG BIKIN TERHARU",
+                        "TERJEBAK DI SITUASI MUSTAHIL — BAGAIMANA CARA DIA SELAMAT?"
+                    ];
+                }
+                return [
+                    filmHint ? `ALUR CERITA ${filmHint} LENGKAP & BIKIN PENASARAN` : "ALUR CERITA FILM: AWALNYA DIREMEHKAN, BERAKHIR MENGEJUTKAN!",
+                    "RANGKUMAN FILM TERBAIK: KISAH YANG BIKIN PENONTON TAK BERKEDIP!",
+                    "DARI ORANG BIASA MENJADI SOSOK PALING DITAKUTI — ALUR CERITA"
+                ];
+            }
+        }
+
+        function refreshHookTitleSuggestions(autoFillInput = false) {
+            const ratio = appState.aspectRatio || "16:9";
+            const extraCtx = document.getElementById("extraContextInput")?.value || "";
+            const suggestions = buildHookTitleSuggestions(appState.hookAnalytics, ratio, extraCtx);
+            const container = document.getElementById("hookTitleSuggestions");
+            const input = document.getElementById("templateTitleInput");
+
+            if (input && (autoFillInput || !input.value.trim())) {
+                input.value = suggestions[0];
+            }
+
+            if (container) {
+                container.innerHTML = "";
+                suggestions.forEach((title) => {
+                    const chip = document.createElement("button");
+                    chip.type = "button";
+                    chip.className = "text-[10px] px-2 py-1 rounded-md bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-200 border border-zinc-700 hover:border-amber-500/40 transition text-left truncate max-w-full";
+                    chip.textContent = `✨ ${title}`;
+                    chip.onclick = () => applySuggestedTitle(title);
+                    container.appendChild(chip);
+                });
+            }
+            return suggestions;
+        }
+
+        function applySuggestedTitle(title) {
+            const input = document.getElementById("templateTitleInput");
+            if (input) {
+                input.value = title;
+                showToast("Judul template diperbarui!", "success");
+            }
+        }
+
+        function copySingleText(text) {
+            const tmp = document.createElement("textarea");
+            tmp.value = text;
+            document.body.appendChild(tmp);
+            tmp.select();
+            try {
+                document.execCommand("copy");
+                showToast("Judul berhasil di-copy!", "success");
+            } catch (e) {}
+            document.body.removeChild(tmp);
+        }
+
+        function drawWrappedText(ctx, text, centerX, startY, maxWidth, lineHeight, maxLines = 3) {
+            const words = (text || "").trim().split(/\s+/);
+            const lines = [];
+            let currentLine = "";
+
+            for (const word of words) {
+                const testLine = currentLine ? `${currentLine} ${word}` : word;
+                if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                    if (lines.length >= maxLines) break;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            if (currentLine && lines.length < maxLines) {
+                lines.push(currentLine);
+            }
+
+            const totalHeight = lines.length * lineHeight;
+            let y = startY - (totalHeight / 2) + (lineHeight * 0.75);
+            for (const line of lines) {
+                ctx.fillText(line, centerX, y);
+                y += lineHeight;
+            }
+        }
+
+        function drawTemplateFrame(ctx, vid, targetW, targetH, opts) {
+            const {
+                aspectRatio = "16:9",
+                templateId = "viral_header",
+                hookTitle = "",
+                optColorFilter = true,
+                zoomFactor = 1.0,
+                clipIndex = 1,
+                totalClips = 15
+            } = opts;
+
+            const isPortrait = aspectRatio === "9:16";
+            const vidAspect = (vid.videoWidth && vid.videoHeight) ? (vid.videoWidth / vid.videoHeight) : (16 / 9);
+
+            ctx.save();
+            ctx.clearRect(0, 0, targetW, targetH);
+
+            // 1. Latar Belakang
+            if (isPortrait) {
+                // Background Blur Penuh Estetik untuk 9:16 TikTok/Shorts
+                ctx.save();
+                ctx.filter = "blur(18px) brightness(0.42) saturate(1.2)";
+                const bgScale = Math.max(targetW / (vid.videoWidth || 640), targetH / (vid.videoHeight || 360)) * 1.15;
+                const bgW = (vid.videoWidth || 640) * bgScale;
+                const bgH = (vid.videoHeight || 360) * bgScale;
+                ctx.drawImage(vid, (targetW - bgW) / 2, (targetH - bgH) / 2, bgW, bgH);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = "#09090b";
+                ctx.fillRect(0, 0, targetW, targetH);
+            }
+
+            // 2. Video Utama (dengan Color Filter & Dynamic Zoom)
+            ctx.save();
+            if (optColorFilter) {
+                ctx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
+            }
+
+            let fgY = 0;
+            let fgH = targetH;
+
+            if (isPortrait) {
+                fgH = Math.min(Math.round(targetH * 0.54), Math.round(targetW / vidAspect));
+                fgY = Math.round((targetH - fgH) / 2) + (templateId === "clean_blur" ? 0 : 14);
+
+                ctx.beginPath();
+                ctx.rect(0, fgY, targetW, fgH);
+                ctx.clip();
+
+                const drawW = targetW * zoomFactor;
+                const drawH = fgH * zoomFactor;
+                ctx.drawImage(vid, (targetW - drawW) / 2, fgY + (fgH - drawH) / 2, drawW, drawH);
+            } else {
+                const drawW = targetW * zoomFactor;
+                const drawH = targetH * zoomFactor;
+                ctx.drawImage(vid, (targetW - drawW) / 2, (targetH - drawH) / 2, drawW, drawH);
+            }
+            ctx.restore();
+
+            // 3. Overlay Template Menarik
+            ctx.filter = "none";
+            const cleanTitle = (hookTitle || "").trim() || "ALUR CERITA FILM PENUH TEKA-TEKI";
+
+            if (templateId === "viral_header") {
+                if (isPortrait) {
+                    // Border aksen tipis di atas & bawah video utama
+                    ctx.fillStyle = "rgba(245, 158, 11, 0.75)";
+                    ctx.fillRect(0, fgY - 2, targetW, 2);
+                    ctx.fillRect(0, fgY + fgH, targetW, 2);
+
+                    // Badge kecil di atas judul
+                    ctx.fillStyle = "#e11d48";
+                    const pillW = 148, pillH = 22;
+                    const pillX = (targetW - pillW) / 2;
+                    const pillY = Math.max(24, fgY - 148);
+                    ctx.beginPath();
+                    ctx.roundRect ? ctx.roundRect(pillX, pillY, pillW, pillH, 11) : ctx.fillRect(pillX, pillY, pillW, pillH);
+                    ctx.fill();
+
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "800 11px Inter, sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("🔥 ALUR CERITA FILM", targetW / 2, pillY + 15);
+
+                    // Judul Hook Bold Putih dengan Shadow
+                    ctx.font = "800 19px Inter, sans-serif";
+                    ctx.fillStyle = "#ffffff";
+                    ctx.shadowColor = "rgba(0,0,0,0.9)";
+                    ctx.shadowBlur = 8;
+                    drawWrappedText(ctx, cleanTitle.toUpperCase(), targetW / 2, fgY - 66, targetW - 44, 24, 3);
+                    ctx.shadowBlur = 0;
+
+                    // Footer Badge & Progress Bar
+                    const footY = fgY + fgH + 34;
+                    ctx.fillStyle = "rgba(24, 24, 31, 0.85)";
+                    ctx.beginPath();
+                    ctx.roundRect ? ctx.roundRect(targetW / 2 - 95, footY, 190, 26, 13) : ctx.fillRect(targetW / 2 - 95, footY, 190, 26);
+                    ctx.fill();
+                    ctx.fillStyle = "#fcd34d";
+                    ctx.font = "700 11px Inter, sans-serif";
+                    ctx.fillText(`KLIP #${clipIndex}/${totalClips} • LANJUT NONTON`, targetW / 2, footY + 17);
+                } else {
+                    // 16:9 YouTube Viral Hook Top Bar (elegan & tidak menutupi wajah tengah)
+                    const grad = ctx.createLinearGradient(0, 0, 0, 56);
+                    grad.addColorStop(0, "rgba(9, 9, 11, 0.88)");
+                    grad.addColorStop(1, "rgba(9, 9, 11, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, targetW, 56);
+
+                    ctx.fillStyle = "#f59e0b";
+                    ctx.fillRect(14, 12, 4, 22);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "800 13px Inter, sans-serif";
+                    ctx.textAlign = "left";
+                    ctx.shadowColor = "rgba(0,0,0,0.85)";
+                    ctx.shadowBlur = 4;
+                    const shortTitle = cleanTitle.length > 58 ? cleanTitle.slice(0, 55) + "..." : cleanTitle;
+                    ctx.fillText(`🔥 ${shortTitle.toUpperCase()}`, 26, 28);
+                    ctx.shadowBlur = 0;
+                }
+            } else if (templateId === "cinema_gold") {
+                if (isPortrait) {
+                    ctx.fillStyle = "#050507";
+                    ctx.fillRect(0, 0, targetW, fgY - 2);
+                    ctx.fillRect(0, fgY + fgH + 2, targetW, targetH - (fgY + fgH + 2));
+
+                    ctx.fillStyle = "#f59e0b";
+                    ctx.fillRect(0, fgY - 2, targetW, 2);
+                    ctx.fillRect(0, fgY + fgH, targetW, 2);
+
+                    ctx.fillStyle = "#fbbf24";
+                    ctx.font = "800 11px Inter, sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("🎬 CINEMA RECAP • SPOILER ALERT", targetW / 2, 44);
+
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "800 18px Inter, sans-serif";
+                    drawWrappedText(ctx, cleanTitle.toUpperCase(), targetW / 2, fgY - 68, targetW - 44, 24, 3);
+
+                    ctx.fillStyle = "#a1a1aa";
+                    ctx.font = "600 12px Inter, sans-serif";
+                    ctx.fillText(`BAGIAN #${clipIndex} • ALUR CERITA LENGKAP`, targetW / 2, fgY + fgH + 46);
+                } else {
+                    // 16:9 Letterbox Cinema Gold
+                    ctx.fillStyle = "#050507";
+                    ctx.fillRect(0, 0, targetW, 38);
+                    ctx.fillRect(0, targetH - 26, targetW, 26);
+
+                    ctx.fillStyle = "#f59e0b";
+                    ctx.fillRect(0, 38, targetW, 1.5);
+                    ctx.fillRect(0, targetH - 27.5, targetW, 1.5);
+
+                    ctx.fillStyle = "#fbbf24";
+                    ctx.font = "800 12px Inter, sans-serif";
+                    ctx.textAlign = "center";
+                    const shortTitle = cleanTitle.length > 62 ? cleanTitle.slice(0, 59) + "..." : cleanTitle;
+                    ctx.fillText(shortTitle.toUpperCase(), targetW / 2, 24);
+
+                    ctx.fillStyle = "#d4d4d8";
+                    ctx.font = "600 10px Inter, sans-serif";
+                    ctx.fillText(`SPOILER ALERT • ALUR CERITA FILM • KLIP #${clipIndex}/${totalClips}`, targetW / 2, targetH - 9);
+                }
+            }
+
+            ctx.restore();
         }
 
         // ==========================================
@@ -1136,13 +1528,35 @@
                 const canvas = document.getElementById("processingCanvas");
                 const ctx = canvas.getContext("2d");
 
-                // Dimensi canvas optimal (harus genap untuk standar encoder H.264 MP4)
-                const targetW = 640;
-                const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
-                let targetH = Math.round(targetW * aspect);
-                if (targetH % 2 !== 0) targetH += 1;
+                const activeRatio = appState.aspectRatio || "16:9";
+                const activeTemplate = document.getElementById("videoTemplateSelect")?.value || appState.videoTemplate || "viral_header";
+                appState.videoTemplate = activeTemplate;
+
+                let activeHookTitle = document.getElementById("templateTitleInput")?.value.trim() || "";
+                if (!activeHookTitle) {
+                    const autoList = refreshHookTitleSuggestions(true);
+                    activeHookTitle = autoList[0] || "ALUR CERITA FILM PENUH TEKA-TEKI";
+                }
+
+                // Dimensi canvas optimal sesuai rasio pilihan (genap untuk standar encoder H.264 MP4)
+                let targetW = 640;
+                let targetH = 360;
+                if (activeRatio === "9:16") {
+                    targetW = 432;
+                    targetH = 768;
+                } else {
+                    const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
+                    targetH = Math.round(targetW * aspect);
+                    if (targetH % 2 !== 0) targetH += 1;
+                }
                 canvas.width = targetW;
                 canvas.height = targetH;
+
+                // Canvas khusus keyframe AI Vision agar AI melihat adegan asli bersih tanpa tertutup teks template
+                const aiCanvas = document.createElement("canvas");
+                aiCanvas.width = 480;
+                aiCanvas.height = Math.max(200, Math.round(480 * ((hiddenVid.videoHeight / hiddenVid.videoWidth) || (9 / 16))));
+                const aiCtx = aiCanvas.getContext("2d");
 
                 const filmDuration = hiddenVid.duration;
 
@@ -1258,16 +1672,16 @@
                     // Seek ke detik awal adegan di film asli
                     await seekVideo(hiddenVid, startTime);
 
-                    // A. Ambil 1 STILL KEYFRAME untuk visual prompt AI & timeline strip
-                    ctx.save();
-                    ctx.clearRect(0, 0, targetW, targetH);
+                    // A. Ambil 1 STILL KEYFRAME bersih untuk visual prompt AI & timeline strip
+                    aiCtx.save();
+                    aiCtx.clearRect(0, 0, aiCanvas.width, aiCanvas.height);
                     if (optColorFilter) {
-                        ctx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
+                        aiCtx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
                     }
-                    ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
-                    ctx.restore();
+                    aiCtx.drawImage(hiddenVid, 0, 0, aiCanvas.width, aiCanvas.height);
+                    aiCtx.restore();
 
-                    const dataUrl = canvas.toDataURL("image/jpeg", 0.70);
+                    const dataUrl = aiCanvas.toDataURL("image/jpeg", 0.72);
                     appState.extractedFrames.push({
                         clipIndex: i + 1,
                         timelineStart,
@@ -1328,25 +1742,21 @@
                         if (hiddenVid.currentTime - lastSampledTime >= minSampleInterval) {
                             lastSampledTime = hiddenVid.currentTime;
 
-                            ctx.save();
-                            ctx.clearRect(0, 0, targetW, targetH);
-
-                            if (optColorFilter) {
-                                ctx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
-                            }
-
+                            let zoomFactor = 1.0;
                             if (optZoom) {
                                 const progress = Math.min(1.0, (hiddenVid.currentTime - startTime) / clipDurationSec);
-                                const zoomFactor = (i % 2 === 0) ? (1.03 + progress * 0.03) : (1.06 - progress * 0.03);
-                                const w = targetW * zoomFactor;
-                                const h = targetH * zoomFactor;
-                                const x = (targetW - w) / 2;
-                                const y = (targetH - h) / 2;
-                                ctx.drawImage(hiddenVid, x, y, w, h);
-                            } else {
-                                ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
+                                zoomFactor = (i % 2 === 0) ? (1.03 + progress * 0.03) : (1.06 - progress * 0.03);
                             }
-                            ctx.restore();
+
+                            drawTemplateFrame(ctx, hiddenVid, targetW, targetH, {
+                                aspectRatio: activeRatio,
+                                templateId: activeTemplate,
+                                hookTitle: activeHookTitle,
+                                optColorFilter,
+                                zoomFactor,
+                                clipIndex: i + 1,
+                                totalClips: timestamps.length
+                            });
 
                             if (canUseWebCodecs) {
                                 // Timestamp output MP4 terikat 100% dengan durasi klip aktual (Normal 1.0x Speed)
@@ -1601,6 +2011,8 @@
                 recommendation
             };
 
+            const suggestedHookTitles = refreshHookTitleSuggestions(false);
+
             const hookLiveMeter = document.getElementById("hookLiveMeter");
             const hookFinalSummary = document.getElementById("hookFinalSummary");
             const hookOverallBadge = document.getElementById("hookOverallBadge");
@@ -1613,7 +2025,10 @@
                 hookOverallBadge.textContent = gradeLabel;
                 hookOverallBadge.className = badgeClass;
             }
-            if (hookOpeningEval) hookOpeningEval.innerHTML = recommendation;
+            if (hookOpeningEval) {
+                const bestTitle = suggestedHookTitles[0] || "";
+                hookOpeningEval.innerHTML = `${recommendation}<div class="mt-2 pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2"><span class="text-amber-300 font-semibold truncate">✨ Saran Judul (${appState.aspectRatio}): ${bestTitle}</span><button type="button" onclick="copySingleText('${bestTitle.replace(/'/g, "\\'")}')" class="shrink-0 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-[10px] font-bold border border-amber-500/30">Copy</button></div>`;
+            }
 
             if (hookTopList) {
                 hookTopList.innerHTML = "";
@@ -1934,6 +2349,11 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                                     type: "STRING",
                                     description: "Naskah lengkap terstruktur per klip dengan penanda [Klip X • MM:SS - MM:SS] sebelum setiap paragraf narasi."
                                 },
+                                suggestedViralTitles: {
+                                    type: "ARRAY",
+                                    description: "3 saran judul viral yang sangat memancing klik sesuai isi cerita film, hasil deteksi hook, dan rasio platform (" + (appState.aspectRatio === "9:16" ? "TikTok/Shorts 9:16 singkat padat" : "YouTube 16:9") + ").",
+                                    items: { type: "STRING" }
+                                },
                                 sceneAlignments: {
                                     type: "ARRAY",
                                     description: "Daftar pemetaan tiap klip untuk sinkronisasi CapCut",
@@ -2012,6 +2432,7 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
 
                 let fullScript = "";
                 let breakdowns = [];
+                let viralTitles = [];
 
                 try {
                     let cleanText = rawJson.trim();
@@ -2023,6 +2444,7 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                     const parsed = JSON.parse(cleanText);
                     fullScript = parsed.fullNarrationScript || "";
                     breakdowns = parsed.sceneAlignments || [];
+                    viralTitles = parsed.suggestedViralTitles || [];
                 } catch (parseErr) {
                     console.warn("JSON parse fallback. Mengambil teks naskah langsung:", parseErr);
                     fullScript = rawJson.replace(/```(json)?/g, "").trim();
@@ -2044,6 +2466,7 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                 scriptArea.value = appState.generatedScriptText;
                 updateWordCount();
                 renderSceneBreakdowns();
+                renderViralTitles(viralTitles);
 
                 setActiveStep(3);
                 updateStatusBadge("Naskah Lengkap Siap • Lanjut TTS", "emerald");
@@ -2062,6 +2485,37 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                 genBtn.disabled = false;
                 scriptAbortController = null;
             }
+        }
+
+        function renderViralTitles(titles) {
+            const box = document.getElementById("viralTitlesBox");
+            const list = document.getElementById("viralTitlesList");
+            const badge = document.getElementById("viralTitlesPlatformBadge");
+            if (!box || !list) return;
+
+            const finalTitles = (titles && titles.length > 0)
+                ? titles
+                : buildHookTitleSuggestions(appState.hookAnalytics, appState.aspectRatio, document.getElementById("extraContextInput")?.value || "");
+
+            if (badge) {
+                badge.textContent = appState.aspectRatio === "9:16" ? "TikTok / Shorts (9:16)" : "YouTube (16:9)";
+            }
+
+            box.classList.remove("hidden");
+            list.innerHTML = "";
+            finalTitles.forEach((t, idx) => {
+                const row = document.createElement("div");
+                row.className = "flex items-center justify-between gap-2 p-2 rounded-lg bg-zinc-900/90 border border-zinc-800/80";
+                const safeArg = t.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+                row.innerHTML = `
+                    <span class="text-zinc-100 font-medium truncate"><span class="text-amber-400 font-bold mr-1">#${idx + 1}</span> ${t}</span>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onclick="applySuggestedTitle('${safeArg}')" class="px-2 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-semibold border border-indigo-500/30">Pakai</button>
+                        <button type="button" onclick="copySingleText('${safeArg}')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-semibold border border-zinc-700">Copy</button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
         }
 
         function renderSceneBreakdowns() {
