@@ -264,65 +264,6 @@
                                     </span>
                                     <input type="checkbox" id="optZoom" checked class="accent-indigo-500 w-4 h-4 rounded">
                                 </label>
-                                <label class="flex items-center justify-between cursor-pointer bg-zinc-900/80 p-2.5 rounded-lg border border-amber-500/20">
-                                    <span class="flex items-center gap-2">
-                                        <i class="fa-solid fa-fire text-amber-400"></i>
-                                        <span>Pendeteksi Hook Video & Analitik Retensi (Live Score)</span>
-                                    </span>
-                                    <input type="checkbox" id="optHookDetector" checked class="accent-amber-500 w-4 h-4 rounded">
-                                </label>
-                            </div>
-
-                            <!-- Pilihan Rasio Platform & Template Menarik -->
-                            <div class="mt-3.5 pt-3.5 border-t border-zinc-800/80 space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                                        <i class="fa-solid fa-layer-group text-purple-400"></i> Rasio & Template Video:
-                                    </span>
-                                    <span id="ratioDimsBadge" class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">16:9 YouTube (640x360)</span>
-                                </div>
-
-                                <!-- Tombol Pilih Rasio YouTube vs TikTok -->
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button type="button" id="ratioBtn169" onclick="selectAspectRatio('16:9')" class="p-2.5 rounded-xl border-2 border-indigo-500 bg-indigo-500/15 text-left transition">
-                                        <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                                            <i class="fa-brands fa-youtube text-rose-400"></i> YouTube (16:9)
-                                        </div>
-                                        <div class="text-[10px] text-zinc-400 mt-0.5">Landscape Full / Cinema</div>
-                                    </button>
-                                    <button type="button" id="ratioBtn916" onclick="selectAspectRatio('9:16')" class="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 text-left transition">
-                                        <div class="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                                            <i class="fa-brands fa-tiktok text-cyan-400"></i> TikTok / Shorts (9:16)
-                                        </div>
-                                        <div class="text-[10px] text-zinc-400 mt-0.5">Portrait + Blur BG Estetik</div>
-                                    </button>
-                                </div>
-
-                                <!-- Pilihan Template Tampilan -->
-                                <div>
-                                    <label for="videoTemplateSelect" class="block text-[11px] font-semibold text-zinc-400 mb-1.5">
-                                        Pilih Desain Template Overlay:
-                                    </label>
-                                    <select id="videoTemplateSelect" onchange="onTemplateChanged()" class="w-full bg-zinc-900 border border-zinc-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-zinc-100 outline-none transition font-medium">
-                                        <option value="viral_header" selected>🔥 Viral Hook Header (Judul Hook Menarik + Blur/Cinema Frame)</option>
-                                        <option value="cinema_gold">🎬 Cinema Breaking / Misteri (Frame Emas + Spoiler Badge)</option>
-                                        <option value="clean_blur">✨ Clean Sinematik (Tanpa Teks Judul, Fokus Visual)</option>
-                                    </select>
-                                </div>
-
-                                <!-- Input Judul Template & Auto-Saran dari Deteksi Hook -->
-                                <div id="templateTitleWrap" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <label for="templateTitleInput" class="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
-                                            <i class="fa-solid fa-heading"></i> Judul di Bawah "ALUR CERITA FILM" (Bisa Diubah):
-                                        </label>
-                                        <button type="button" onclick="refreshHookTitleSuggestions(true)" class="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-semibold transition flex items-center gap-1">
-                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Saran Hook
-                                        </button>
-                                    </div>
-                                    <input type="text" id="templateTitleInput" oninput="syncQuickRetitleInput(this.value)" placeholder="Ketik atau pilih judul di bawah tulisan ALUR CERITA FILM..." class="w-full bg-studio-950 border border-zinc-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition">
-                                    <div id="hookTitleSuggestions" class="flex flex-wrap gap-1.5"></div>
-                                </div>
                             </div>
 
                             <!-- Tombol Proses Video & Ekstrak Frame -->
@@ -347,71 +288,15 @@
                                 </button>
                             </div>
 
-                            <!-- Panel Analitik Hook Video (Live saat proses & Ringkasan Akhir) -->
-                            <div id="hookAnalyticsBox" class="hidden mt-4 pt-3 border-t border-zinc-800/90 flex flex-col gap-3">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                                        <i class="fa-solid fa-fire-flame-curved"></i> Analitik Hook Video
-                                    </span>
-                                    <span id="hookOverallBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                                        Menganalisis...
-                                    </span>
-                                </div>
-
-                                <!-- Live Meter saat proses berjalan -->
-                                <div id="hookLiveMeter" class="p-2.5 rounded-xl bg-studio-950 border border-zinc-800/80 text-[11px] space-y-1.5">
-                                    <div class="flex items-center justify-between text-zinc-300">
-                                        <span id="hookLiveClipLabel">Memindai intensitas visual Klip #1...</span>
-                                        <span id="hookLiveScoreText" class="font-mono font-bold text-amber-400">0/100</span>
-                                    </div>
-                                    <div class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-                                        <div id="hookLiveBar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-all duration-200" style="width: 0%"></div>
-                                    </div>
-                                    <div id="hookLiveBestSoFar" class="text-[10px] text-zinc-400">
-                                        Kandidat Hook Terkuat: <span class="text-zinc-200 font-semibold">-</span>
-                                    </div>
-                                </div>
-
-                                <!-- Hasil Akhir Top Hook & Evaluasi Opening (tampil setelah selesai) -->
-                                <div id="hookFinalSummary" class="hidden space-y-2.5">
-                                    <div id="hookOpeningEval" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-[11px] text-zinc-300 leading-relaxed"></div>
-                                    <div>
-                                        <div class="text-[11px] font-semibold text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                                            <i class="fa-solid fa-trophy text-amber-400"></i> Top 3 Momen Hook Terbaik (Rekomendasi Teaser / Thumbnail):
-                                        </div>
-                                        <div id="hookTopList" class="space-y-1.5"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Preview Video Gabungan Lengkap + Tombol Download di Bawah -->
-                            <div id="processedVideoResult" class="hidden mt-4 pt-3 border-t border-zinc-800 flex flex-col gap-3">
+                            <!-- Hasil Download Video Anti-Copyright -->
+                            <div id="processedVideoResult" class="hidden mt-4 pt-3 border-t border-zinc-800 flex flex-col gap-2">
                                 <div class="flex items-center justify-between text-xs text-emerald-400 font-medium">
-                                    <span><i class="fa-solid fa-clapperboard mr-1"></i> Preview Video Jadi (Template Terpilih)</span>
+                                    <span><i class="fa-solid fa-circle-check mr-1"></i> Video Anti-Copyright Siap!</span>
                                     <span id="clipSummaryBadge" class="text-zinc-400"></span>
                                 </div>
-
-                                <div class="rounded-xl overflow-hidden bg-black border border-zinc-800 shadow-lg">
-                                    <video id="processedVideoPreview" controls playsinline class="w-full max-h-[420px] object-contain mx-auto bg-black"></video>
-                                </div>
-
-                                <!-- Ubah Judul Cepat Langsung dari Preview -->
-                                <div class="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                                    <input type="text" id="quickRetitleInput" placeholder="Ganti judul di bawah 'ALUR CERITA FILM' lalu klik Terapkan..." class="flex-1 bg-studio-950 border border-zinc-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition">
-                                    <button type="button" onclick="applyQuickRetitleAndRender()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition shrink-0">
-                                        <i class="fa-solid fa-rotate"></i>
-                                        <span>Ganti Judul & Update Preview</span>
-                                    </button>
-                                </div>
-
-                                <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-circle-info text-indigo-400"></i>
-                                    <span>Hasil download 100% sama dengan preview di atas — semua potongan video sudah jadi satu dalam template & tinggal dipadukan dengan narasi alur cerita.</span>
-                                </div>
-
-                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.mp4" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-emerald-600/20">
-                                    <i class="fa-solid fa-download text-sm"></i>
-                                    <span>Download Video Hasil Jadi (MP4 Siap Upload / CapCut)</span>
+                                <a id="downloadProcessedVideoBtn" download="alur-cerita-anticopyright.mp4" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
+                                    <i class="fa-solid fa-file-video text-sm"></i>
+                                    <span>Download Video Hasil Potongan (MP4 Siap CapCut)</span>
                                 </a>
                             </div>
                         </div>
@@ -520,15 +405,6 @@
                         </div>
 
                         <textarea id="scriptOutput" rows="10" oninput="updateWordCount()" placeholder="1. Upload file film MP4 di sebelah kiri.&#10;2. Klik 'Potong Anti-Copyright & Baca Visual'.&#10;3. Klik 'Hasilkan Naskah Alur Cerita' untuk mendapatkan naskah yang pas dengan adegan videonya..." class="w-full bg-studio-950 border border-zinc-800 focus:border-indigo-500 rounded-xl p-4 text-sm leading-relaxed text-zinc-100 placeholder-zinc-600 outline-none transition resize-y"></textarea>
-                    </div>
-
-                    <!-- Saran Judul Viral AI + Deteksi Hook -->
-                    <div id="viralTitlesBox" class="hidden bg-studio-950/90 border border-amber-500/30 rounded-xl p-4 space-y-2">
-                        <div class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-                            <span><i class="fa-solid fa-bolt mr-1"></i> Rekomendasi Judul Viral (Hook + AI)</span>
-                            <span id="viralTitlesPlatformBadge" class="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded font-mono">YouTube / TikTok</span>
-                        </div>
-                        <div id="viralTitlesList" class="space-y-1.5 text-xs"></div>
                     </div>
 
                     <!-- Rincian Adegan per Timestamp (Sinkronisasi CapCut) -->
@@ -657,9 +533,6 @@
             extractedFrames: [],
             processedVideoUrl: null,
             processedVideoDuration: 0,
-            hookAnalytics: null,
-            aspectRatio: "16:9",
-            videoTemplate: "viral_header",
             generatedScriptText: "",
             sceneBreakdowns: [],
             audioBlobUrl: null,
@@ -883,8 +756,7 @@
                 }
 
                 updateStatusBadge("Video Siap • Mulai Potong Anti-Copyright", "amber");
-                refreshHookTitleSuggestions(true);
-                showToast(`Video "${file.name}" berhasil dimuat! Pilih rasio TikTok/YouTube & template lalu klik 'Potong Anti-Copyright'.`, "info");
+                showToast(`Video "${file.name}" berhasil dimuat! Klik tombol 'Mulai Potong Video Anti-Copyright' di Langkah 1.`, "info");
             };
         }
 
@@ -900,9 +772,6 @@
                 extractedFrames: [],
                 processedVideoUrl: null,
                 processedVideoDuration: 0,
-                hookAnalytics: null,
-                aspectRatio: appState.aspectRatio || "16:9",
-                videoTemplate: appState.videoTemplate || "viral_header",
                 generatedScriptText: "",
                 sceneBreakdowns: [],
                 audioBlobUrl: null
@@ -914,19 +783,6 @@
             document.getElementById("resetBtn").classList.add("hidden");
             document.getElementById("framesPreviewPanel").classList.add("hidden");
             document.getElementById("processedVideoResult").classList.add("hidden");
-            const previewVid = document.getElementById("processedVideoPreview");
-            if (previewVid) {
-                previewVid.removeAttribute("src");
-                previewVid.load();
-            }
-            const hookBox = document.getElementById("hookAnalyticsBox");
-            if (hookBox) hookBox.classList.add("hidden");
-            const hookFinal = document.getElementById("hookFinalSummary");
-            if (hookFinal) hookFinal.classList.add("hidden");
-            const vtBox = document.getElementById("viralTitlesBox");
-            if (vtBox) vtBox.classList.add("hidden");
-            const tplInput = document.getElementById("templateTitleInput");
-            if (tplInput) tplInput.value = "";
             document.getElementById("sceneBreakdownBox").classList.add("hidden");
             document.getElementById("audioResultBox").classList.add("hidden");
             document.getElementById("scriptOutput").value = "";
@@ -934,332 +790,6 @@
             updateWordCount();
             setActiveStep(1);
             updateStatusBadge("Menunggu Video MP4", "zinc");
-        }
-
-        // ==========================================
-        // PENGATURAN RASIO (YOUTUBE 16:9 vs TIKTOK 9:16), TEMPLATE & AUTO JUDUL HOOK
-        // ==========================================
-        function selectAspectRatio(ratio) {
-            appState.aspectRatio = ratio;
-            const btn169 = document.getElementById("ratioBtn169");
-            const btn916 = document.getElementById("ratioBtn916");
-            const badge = document.getElementById("ratioDimsBadge");
-
-            if (ratio === "9:16") {
-                if (btn916) btn916.className = "p-2.5 rounded-xl border-2 border-cyan-500 bg-cyan-500/15 text-left transition";
-                if (btn169) btn169.className = "p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 text-left transition";
-                if (badge) badge.textContent = "9:16 TikTok / Shorts (432x768)";
-            } else {
-                if (btn169) btn169.className = "p-2.5 rounded-xl border-2 border-indigo-500 bg-indigo-500/15 text-left transition";
-                if (btn916) btn916.className = "p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 text-left transition";
-                if (badge) badge.textContent = "16:9 YouTube (640x360)";
-            }
-            refreshHookTitleSuggestions(true);
-        }
-
-        function onTemplateChanged() {
-            const sel = document.getElementById("videoTemplateSelect");
-            const val = sel ? sel.value : "viral_header";
-            appState.videoTemplate = val;
-            const wrap = document.getElementById("templateTitleWrap");
-            if (wrap) {
-                if (val === "clean_blur") {
-                    wrap.classList.add("opacity-50");
-                } else {
-                    wrap.classList.remove("opacity-50");
-                }
-            }
-        }
-
-        function buildHookTitleSuggestions(hookData, ratio, extraCtx = "") {
-            const isPortrait = ratio === "9:16";
-            const cleanCtx = (extraCtx || "").replace(/^(ini\s+film|film)\s+/i, "").trim();
-            const filmHint = cleanCtx && cleanCtx.length <= 28 ? cleanCtx.toUpperCase() : "";
-            const topTag = hookData?.topHooks?.[0]?.hookTag || "";
-            const score = hookData?.overallScore || 0;
-
-            if (isPortrait) {
-                if (topTag.includes("Aksi")) {
-                    return [
-                        filmHint ? `${filmHint}: AKSI PALING GILA YANG BIKIN TEGANG!` : "JANGAN SKIP! AKSI PALING GILA DI FILM INI!",
-                        "DIREMEHKAN DI AWAL, TERNYATA DIA TAK TERKALAHKAN!",
-                        "DETIK-DETIK MEMATIKAN YANG BIKIN MERINDING!"
-                    ];
-                } else if (topTag.includes("Kontras") || topTag.includes("Dramatis")) {
-                    return [
-                        filmHint ? `${filmHint}: PLOT TWIST YANG TAK TERDUGA!` : "AWALNYA BIASA AJA, ENDINGNYA BIKIN MELONGO!",
-                        "RAHASIA GELAP YANG AKHIRNYA TERBONGKAR!",
-                        "SATU KEPUTUSAN YANG MENGUBAH NASIB SELAMANYA!"
-                    ];
-                }
-                return [
-                    filmHint ? `${filmHint}: ALUR CERITA BIKIN PENASARAN!` : "AWALNYA DIREMEHKAN! TERNYATA DIA PUNYA RAHASIA...",
-                    score >= 75 ? "ADEGAN PALING MENEGANGKAN! WAJIB NONTON SAMPAI HABIS" : "ALUR FILM TERBAIK: TAK DISANGKA BERAKHIR BEGINI!",
-                    "CUMA ORANG TELITI YANG SADAR SAMA KEJADIAN INI!"
-                ];
-            } else {
-                if (topTag.includes("Aksi")) {
-                    return [
-                        filmHint ? `ALUR CERITA ${filmHint} — AKSI PALING MENEGANGKAN!` : "ALUR CERITA FILM: DIANGGAP REMEH, TERNYATA DIA TAK TERKALAHKAN!",
-                        "PENUH AKSI! DETIK-DETIK PERTARUNGAN PALING GILA SEPANJANG FILM",
-                        "ALUR FILM LENGKAP: PERJUANGAN HIDUP MATI MELAWAN KEJAHATAN!"
-                    ];
-                } else if (topTag.includes("Kontras") || topTag.includes("Dramatis")) {
-                    return [
-                        filmHint ? `ALUR CERITA ${filmHint} — PENUH PLOT TWIST!` : "ALUR CERITA FILM: PENUH MISTERI & PLOT TWIST YANG TAK TERDUGA!",
-                        "RAHASIA BESAR TERUNGKAP! KISAH DRAMATIS YANG BIKIN TERHARU",
-                        "TERJEBAK DI SITUASI MUSTAHIL — BAGAIMANA CARA DIA SELAMAT?"
-                    ];
-                }
-                return [
-                    filmHint ? `ALUR CERITA ${filmHint} LENGKAP & BIKIN PENASARAN` : "ALUR CERITA FILM: AWALNYA DIREMEHKAN, BERAKHIR MENGEJUTKAN!",
-                    "RANGKUMAN FILM TERBAIK: KISAH YANG BIKIN PENONTON TAK BERKEDIP!",
-                    "DARI ORANG BIASA MENJADI SOSOK PALING DITAKUTI — ALUR CERITA"
-                ];
-            }
-        }
-
-        function refreshHookTitleSuggestions(autoFillInput = false) {
-            const ratio = appState.aspectRatio || "16:9";
-            const extraCtx = document.getElementById("extraContextInput")?.value || "";
-            const suggestions = buildHookTitleSuggestions(appState.hookAnalytics, ratio, extraCtx);
-            const container = document.getElementById("hookTitleSuggestions");
-            const input = document.getElementById("templateTitleInput");
-
-            if (input && (autoFillInput || !input.value.trim())) {
-                input.value = suggestions[0];
-                syncQuickRetitleInput(suggestions[0]);
-            }
-
-            if (container) {
-                container.innerHTML = "";
-                suggestions.forEach((title) => {
-                    const chip = document.createElement("button");
-                    chip.type = "button";
-                    chip.className = "text-[10px] px-2 py-1 rounded-md bg-zinc-800 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-200 border border-zinc-700 hover:border-amber-500/40 transition text-left truncate max-w-full";
-                    chip.textContent = `✨ ${title}`;
-                    chip.onclick = () => applySuggestedTitle(title);
-                    container.appendChild(chip);
-                });
-            }
-            return suggestions;
-        }
-
-        function applySuggestedTitle(title) {
-            const input = document.getElementById("templateTitleInput");
-            if (input) {
-                input.value = title;
-                syncQuickRetitleInput(title);
-                showToast("Judul template diperbarui!", "success");
-            }
-        }
-
-        function syncQuickRetitleInput(val) {
-            const quickEl = document.getElementById("quickRetitleInput");
-            if (quickEl && quickEl.value !== val) {
-                quickEl.value = val;
-            }
-        }
-
-        function applyQuickRetitleAndRender() {
-            const quickEl = document.getElementById("quickRetitleInput");
-            const topEl = document.getElementById("templateTitleInput");
-            const newTitle = quickEl ? quickEl.value.trim() : "";
-            if (!newTitle) {
-                showToast("Ketik dulu judul barunya sebelum klik Terapkan!", "warning");
-                return;
-            }
-            if (topEl) topEl.value = newTitle;
-            showToast("Merender ulang video dengan judul baru...", "info");
-            startAntiCopyrightProcess();
-        }
-
-        function copySingleText(text) {
-            const tmp = document.createElement("textarea");
-            tmp.value = text;
-            document.body.appendChild(tmp);
-            tmp.select();
-            try {
-                document.execCommand("copy");
-                showToast("Judul berhasil di-copy!", "success");
-            } catch (e) {}
-            document.body.removeChild(tmp);
-        }
-
-        function drawWrappedText(ctx, text, centerX, startY, maxWidth, lineHeight, maxLines = 3) {
-            const words = (text || "").trim().split(/\s+/);
-            const lines = [];
-            let currentLine = "";
-
-            for (const word of words) {
-                const testLine = currentLine ? `${currentLine} ${word}` : word;
-                if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-                    lines.push(currentLine);
-                    currentLine = word;
-                    if (lines.length >= maxLines) break;
-                } else {
-                    currentLine = testLine;
-                }
-            }
-            if (currentLine && lines.length < maxLines) {
-                lines.push(currentLine);
-            }
-
-            const totalHeight = lines.length * lineHeight;
-            let y = startY - (totalHeight / 2) + (lineHeight * 0.75);
-            for (const line of lines) {
-                ctx.fillText(line, centerX, y);
-                y += lineHeight;
-            }
-        }
-
-        function drawTemplateFrame(ctx, vid, targetW, targetH, opts) {
-            const {
-                aspectRatio = "16:9",
-                templateId = "viral_header",
-                hookTitle = "",
-                optColorFilter = true,
-                zoomFactor = 1.0,
-                clipIndex = 1,
-                totalClips = 15
-            } = opts;
-
-            const isPortrait = aspectRatio === "9:16";
-            const vidAspect = (vid.videoWidth && vid.videoHeight) ? (vid.videoWidth / vid.videoHeight) : (16 / 9);
-
-            ctx.save();
-            ctx.clearRect(0, 0, targetW, targetH);
-
-            // 1. Latar Belakang
-            if (isPortrait) {
-                // Background Blur Penuh Estetik untuk 9:16 TikTok/Shorts
-                ctx.save();
-                ctx.filter = "blur(18px) brightness(0.42) saturate(1.2)";
-                const bgScale = Math.max(targetW / (vid.videoWidth || 640), targetH / (vid.videoHeight || 360)) * 1.15;
-                const bgW = (vid.videoWidth || 640) * bgScale;
-                const bgH = (vid.videoHeight || 360) * bgScale;
-                ctx.drawImage(vid, (targetW - bgW) / 2, (targetH - bgH) / 2, bgW, bgH);
-                ctx.restore();
-            } else {
-                ctx.fillStyle = "#09090b";
-                ctx.fillRect(0, 0, targetW, targetH);
-            }
-
-            // 2. Video Utama (dengan Color Filter & Dynamic Zoom)
-            ctx.save();
-            if (optColorFilter) {
-                ctx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
-            }
-
-            let fgY = 0;
-            let fgH = targetH;
-
-            if (isPortrait) {
-                fgH = Math.min(Math.round(targetH * 0.54), Math.round(targetW / vidAspect));
-                fgY = Math.round((targetH - fgH) / 2) + (templateId === "clean_blur" ? 0 : 14);
-
-                ctx.beginPath();
-                ctx.rect(0, fgY, targetW, fgH);
-                ctx.clip();
-
-                const drawW = targetW * zoomFactor;
-                const drawH = fgH * zoomFactor;
-                ctx.drawImage(vid, (targetW - drawW) / 2, fgY + (fgH - drawH) / 2, drawW, drawH);
-            } else {
-                const drawW = targetW * zoomFactor;
-                const drawH = targetH * zoomFactor;
-                ctx.drawImage(vid, (targetW - drawW) / 2, (targetH - drawH) / 2, drawW, drawH);
-            }
-            ctx.restore();
-
-            // 3. Overlay Template Menarik
-            ctx.filter = "none";
-            const cleanTitle = (hookTitle || "").trim() || "ALUR CERITA FILM PENUH TEKA-TEKI";
-
-            if (templateId === "viral_header") {
-                if (isPortrait) {
-                    // Border aksen tipis di atas & bawah video utama
-                    ctx.fillStyle = "rgba(245, 158, 11, 0.75)";
-                    ctx.fillRect(0, fgY - 2, targetW, 2);
-                    ctx.fillRect(0, fgY + fgH, targetW, 2);
-
-                    // Badge kecil di atas judul
-                    ctx.fillStyle = "#e11d48";
-                    const pillW = 148, pillH = 22;
-                    const pillX = (targetW - pillW) / 2;
-                    const pillY = Math.max(24, fgY - 148);
-                    ctx.beginPath();
-                    ctx.roundRect ? ctx.roundRect(pillX, pillY, pillW, pillH, 11) : ctx.fillRect(pillX, pillY, pillW, pillH);
-                    ctx.fill();
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = "800 11px Inter, sans-serif";
-                    ctx.textAlign = "center";
-                    ctx.fillText("🔥 ALUR CERITA FILM", targetW / 2, pillY + 15);
-
-                    // Judul Hook Bold Putih dengan Shadow
-                    ctx.font = "800 19px Inter, sans-serif";
-                    ctx.fillStyle = "#ffffff";
-                    ctx.shadowColor = "rgba(0,0,0,0.9)";
-                    ctx.shadowBlur = 8;
-                    drawWrappedText(ctx, cleanTitle.toUpperCase(), targetW / 2, fgY - 66, targetW - 44, 24, 3);
-                    ctx.shadowBlur = 0;
-                } else {
-                    // 16:9 YouTube Viral Hook Top Bar (elegan & tidak menutupi wajah tengah)
-                    const grad = ctx.createLinearGradient(0, 0, 0, 56);
-                    grad.addColorStop(0, "rgba(9, 9, 11, 0.88)");
-                    grad.addColorStop(1, "rgba(9, 9, 11, 0)");
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, targetW, 56);
-
-                    ctx.fillStyle = "#f59e0b";
-                    ctx.fillRect(14, 12, 4, 22);
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = "800 13px Inter, sans-serif";
-                    ctx.textAlign = "left";
-                    ctx.shadowColor = "rgba(0,0,0,0.85)";
-                    ctx.shadowBlur = 4;
-                    const shortTitle = cleanTitle.length > 58 ? cleanTitle.slice(0, 55) + "..." : cleanTitle;
-                    ctx.fillText(`🔥 ${shortTitle.toUpperCase()}`, 26, 28);
-                    ctx.shadowBlur = 0;
-                }
-            } else if (templateId === "cinema_gold") {
-                if (isPortrait) {
-                    ctx.fillStyle = "#050507";
-                    ctx.fillRect(0, 0, targetW, fgY - 2);
-                    ctx.fillRect(0, fgY + fgH + 2, targetW, targetH - (fgY + fgH + 2));
-
-                    ctx.fillStyle = "#f59e0b";
-                    ctx.fillRect(0, fgY - 2, targetW, 2);
-                    ctx.fillRect(0, fgY + fgH, targetW, 2);
-
-                    ctx.fillStyle = "#fbbf24";
-                    ctx.font = "800 11px Inter, sans-serif";
-                    ctx.textAlign = "center";
-                    ctx.fillText("🎬 CINEMA RECAP • SPOILER ALERT", targetW / 2, 44);
-
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = "800 18px Inter, sans-serif";
-                    drawWrappedText(ctx, cleanTitle.toUpperCase(), targetW / 2, fgY - 68, targetW - 44, 24, 3);
-                } else {
-                    // 16:9 Letterbox Cinema Gold
-                    ctx.fillStyle = "#050507";
-                    ctx.fillRect(0, 0, targetW, 38);
-                    ctx.fillRect(0, targetH - 26, targetW, 26);
-
-                    ctx.fillStyle = "#f59e0b";
-                    ctx.fillRect(0, 38, targetW, 1.5);
-                    ctx.fillRect(0, targetH - 27.5, targetW, 1.5);
-
-                    ctx.fillStyle = "#fbbf24";
-                    ctx.font = "800 12px Inter, sans-serif";
-                    ctx.textAlign = "center";
-                    const shortTitle = cleanTitle.length > 62 ? cleanTitle.slice(0, 59) + "..." : cleanTitle;
-                    ctx.fillText(shortTitle.toUpperCase(), targetW / 2, 24);
-                }
-            }
-
-            ctx.restore();
         }
 
         // ==========================================
@@ -1491,41 +1021,6 @@
             const optCleanCut = document.getElementById("optCleanCut") ? document.getElementById("optCleanCut").checked : true;
             const optColorFilter = document.getElementById("optColorFilter") ? document.getElementById("optColorFilter").checked : true;
             const optZoom = document.getElementById("optZoom") ? document.getElementById("optZoom").checked : true;
-            const optHookDetector = document.getElementById("optHookDetector") ? document.getElementById("optHookDetector").checked : true;
-
-            // Setup Hook Detector Canvas (64x36 ultra-ringan agar tidak memperlambat render video)
-            const hookCanvas = document.createElement("canvas");
-            hookCanvas.width = 64;
-            hookCanvas.height = 36;
-            const hookCtx = hookCanvas.getContext("2d", { willReadFrequently: true });
-            appState.hookAnalytics = null;
-
-            const hookBox = document.getElementById("hookAnalyticsBox");
-            const hookLiveMeter = document.getElementById("hookLiveMeter");
-            const hookFinalSummary = document.getElementById("hookFinalSummary");
-            const hookOverallBadge = document.getElementById("hookOverallBadge");
-            const hookLiveClipLabel = document.getElementById("hookLiveClipLabel");
-            const hookLiveScoreText = document.getElementById("hookLiveScoreText");
-            const hookLiveBar = document.getElementById("hookLiveBar");
-            const hookLiveBestSoFar = document.getElementById("hookLiveBestSoFar");
-
-            if (optHookDetector && hookBox) {
-                hookBox.classList.remove("hidden");
-                if (hookLiveMeter) hookLiveMeter.classList.remove("hidden");
-                if (hookFinalSummary) hookFinalSummary.classList.add("hidden");
-                if (hookOverallBadge) {
-                    hookOverallBadge.textContent = "Live Scanning...";
-                    hookOverallBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 animate-pulse";
-                }
-                if (hookLiveClipLabel) hookLiveClipLabel.textContent = "Memulai pemindaian hook visual...";
-                if (hookLiveScoreText) hookLiveScoreText.textContent = "0/100";
-                if (hookLiveBar) hookLiveBar.style.width = "0%";
-                if (hookLiveBestSoFar) hookLiveBestSoFar.innerHTML = `Kandidat Hook Terkuat: <span class="text-zinc-200 font-semibold">-</span>`;
-            } else if (hookBox) {
-                hookBox.classList.add("hidden");
-            }
-
-            let bestHookSoFar = { clipIndex: 0, hookScore: 0, timelineStart: "00:00", hookTag: "" };
 
             const targetMinutes = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
             let targetTotalSeconds = targetMinutes * 60; // 180s (3m), 600s (10m), 900s (15m), 1200s (20m)
@@ -1556,35 +1051,13 @@
                 const canvas = document.getElementById("processingCanvas");
                 const ctx = canvas.getContext("2d");
 
-                const activeRatio = appState.aspectRatio || "16:9";
-                const activeTemplate = document.getElementById("videoTemplateSelect")?.value || appState.videoTemplate || "viral_header";
-                appState.videoTemplate = activeTemplate;
-
-                let activeHookTitle = document.getElementById("templateTitleInput")?.value.trim() || "";
-                if (!activeHookTitle) {
-                    const autoList = refreshHookTitleSuggestions(true);
-                    activeHookTitle = autoList[0] || "ALUR CERITA FILM PENUH TEKA-TEKI";
-                }
-
-                // Dimensi canvas optimal sesuai rasio pilihan (genap untuk standar encoder H.264 MP4)
-                let targetW = 640;
-                let targetH = 360;
-                if (activeRatio === "9:16") {
-                    targetW = 432;
-                    targetH = 768;
-                } else {
-                    const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
-                    targetH = Math.round(targetW * aspect);
-                    if (targetH % 2 !== 0) targetH += 1;
-                }
+                // Dimensi canvas optimal (harus genap untuk standar encoder H.264 MP4)
+                const targetW = 640;
+                const aspect = hiddenVid.videoHeight / hiddenVid.videoWidth || (9 / 16);
+                let targetH = Math.round(targetW * aspect);
+                if (targetH % 2 !== 0) targetH += 1;
                 canvas.width = targetW;
                 canvas.height = targetH;
-
-                // Canvas khusus keyframe AI Vision agar AI melihat adegan asli bersih tanpa tertutup teks template
-                const aiCanvas = document.createElement("canvas");
-                aiCanvas.width = 480;
-                aiCanvas.height = Math.max(200, Math.round(480 * ((hiddenVid.videoHeight / hiddenVid.videoWidth) || (9 / 16))));
-                const aiCtx = aiCanvas.getContext("2d");
 
                 const filmDuration = hiddenVid.duration;
 
@@ -1700,16 +1173,16 @@
                     // Seek ke detik awal adegan di film asli
                     await seekVideo(hiddenVid, startTime);
 
-                    // A. Ambil 1 STILL KEYFRAME bersih untuk visual prompt AI & timeline strip
-                    aiCtx.save();
-                    aiCtx.clearRect(0, 0, aiCanvas.width, aiCanvas.height);
+                    // A. Ambil 1 STILL KEYFRAME untuk visual prompt AI & timeline strip
+                    ctx.save();
+                    ctx.clearRect(0, 0, targetW, targetH);
                     if (optColorFilter) {
-                        aiCtx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
+                        ctx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
                     }
-                    aiCtx.drawImage(hiddenVid, 0, 0, aiCanvas.width, aiCanvas.height);
-                    aiCtx.restore();
+                    ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
+                    ctx.restore();
 
-                    const dataUrl = aiCanvas.toDataURL("image/jpeg", 0.72);
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.70);
                     appState.extractedFrames.push({
                         clipIndex: i + 1,
                         timelineStart,
@@ -1738,14 +1211,6 @@
                     const minSampleInterval = 0.038; // ~25 fps sampling interval
                     let lastEncodedUs = currentTimestampUs;
 
-                    // Variabel analitik hook per klip
-                    let prevHookLuma = null;
-                    let lastHookSampleTime = startTime - 1.0;
-                    const hookMotionSamples = [];
-                    const hookContrastSamples = [];
-                    const hookLumaSamples = [];
-                    const hookSatSamples = [];
-
                     while (!hiddenVid.ended && hiddenVid.currentTime < clipEndTime && !appState.stopRequested) {
                         if (encoderError) throw encoderError;
 
@@ -1755,36 +1220,29 @@
 
                         await waitForNextVideoFrame(hiddenVid);
 
-                        // Sampling analitik hook setiap ~0.5 detik selama klip diputar
-                        if (optHookDetector && (hiddenVid.currentTime - lastHookSampleTime >= 0.5)) {
-                            lastHookSampleTime = hiddenVid.currentTime;
-                            const m = sampleHookMetrics(hiddenVid, hookCtx, prevHookLuma);
-                            prevHookLuma = m.lumaArr;
-                            hookContrastSamples.push(m.contrastStd);
-                            hookLumaSamples.push(m.avgLuma);
-                            hookSatSamples.push(m.avgSat);
-                            if (m.motionAvg > 0) hookMotionSamples.push(m.motionAvg);
-                        }
-
                         // Pastikan frame dicatat sesuai pergerakan waktu video asli (1.0x Realtime Sync)
                         if (hiddenVid.currentTime - lastSampledTime >= minSampleInterval) {
                             lastSampledTime = hiddenVid.currentTime;
 
-                            let zoomFactor = 1.0;
-                            if (optZoom) {
-                                const progress = Math.min(1.0, (hiddenVid.currentTime - startTime) / clipDurationSec);
-                                zoomFactor = (i % 2 === 0) ? (1.03 + progress * 0.03) : (1.06 - progress * 0.03);
+                            ctx.save();
+                            ctx.clearRect(0, 0, targetW, targetH);
+
+                            if (optColorFilter) {
+                                ctx.filter = "contrast(1.08) saturate(1.12) brightness(1.02)";
                             }
 
-                            drawTemplateFrame(ctx, hiddenVid, targetW, targetH, {
-                                aspectRatio: activeRatio,
-                                templateId: activeTemplate,
-                                hookTitle: activeHookTitle,
-                                optColorFilter,
-                                zoomFactor,
-                                clipIndex: i + 1,
-                                totalClips: timestamps.length
-                            });
+                            if (optZoom) {
+                                const progress = Math.min(1.0, (hiddenVid.currentTime - startTime) / clipDurationSec);
+                                const zoomFactor = (i % 2 === 0) ? (1.03 + progress * 0.03) : (1.06 - progress * 0.03);
+                                const w = targetW * zoomFactor;
+                                const h = targetH * zoomFactor;
+                                const x = (targetW - w) / 2;
+                                const y = (targetH - h) / 2;
+                                ctx.drawImage(hiddenVid, x, y, w, h);
+                            } else {
+                                ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
+                            }
+                            ctx.restore();
 
                             if (canUseWebCodecs) {
                                 // Timestamp output MP4 terikat 100% dengan durasi klip aktual (Normal 1.0x Speed)
@@ -1809,53 +1267,6 @@
                     try {
                         hiddenVid.pause();
                     } catch (e) {}
-
-                    // Hitung & tampilkan Live Hook Score untuk klip yang baru selesai dipotong
-                    if (optHookDetector && appState.extractedFrames[i]) {
-                        const avgMotion = hookMotionSamples.length > 0
-                            ? hookMotionSamples.reduce((a, b) => a + b, 0) / hookMotionSamples.length
-                            : 5;
-                        const avgContrast = hookContrastSamples.length > 0
-                            ? hookContrastSamples.reduce((a, b) => a + b, 0) / hookContrastSamples.length
-                            : 35;
-                        const avgLuma = hookLumaSamples.length > 0
-                            ? hookLumaSamples.reduce((a, b) => a + b, 0) / hookLumaSamples.length
-                            : 100;
-                        const avgSat = hookSatSamples.length > 0
-                            ? hookSatSamples.reduce((a, b) => a + b, 0) / hookSatSamples.length
-                            : 25;
-
-                        const motionPts = Math.min(50, (avgMotion / 20) * 50);
-                        const contrastPts = Math.min(30, (avgContrast / 60) * 30);
-                        const lightingBonus = (avgLuma >= 35 && avgLuma <= 215) ? 12 : 5;
-                        const satBonus = Math.min(8, (avgSat / 45) * 8);
-                        const hookScore = Math.min(99, Math.max(28, Math.round(motionPts + contrastPts + lightingBonus + satBonus)));
-
-                        let hookTag = "Adegan Cerita Stabil";
-                        if (avgMotion >= 13) hookTag = "Aksi Cepat & Dinamis";
-                        else if (avgContrast >= 50) hookTag = "Visual Kontras Dramatis";
-                        else if (avgSat >= 35) hookTag = "Warna Sinematik Mencolok";
-
-                        appState.extractedFrames[i].hookScore = hookScore;
-                        appState.extractedFrames[i].hookTag = hookTag;
-                        appState.extractedFrames[i].motionLevel = Math.round(avgMotion * 10) / 10;
-
-                        if (hookScore > bestHookSoFar.hookScore) {
-                            bestHookSoFar = {
-                                clipIndex: i + 1,
-                                hookScore,
-                                timelineStart,
-                                hookTag
-                            };
-                        }
-
-                        if (hookLiveClipLabel) hookLiveClipLabel.textContent = `Klip #${i + 1} (${timelineStart}) • ${hookTag}`;
-                        if (hookLiveScoreText) hookLiveScoreText.textContent = `${hookScore}/100`;
-                        if (hookLiveBar) hookLiveBar.style.width = `${hookScore}%`;
-                        if (hookLiveBestSoFar && bestHookSoFar.clipIndex > 0) {
-                            hookLiveBestSoFar.innerHTML = `Kandidat Hook Terkuat: <span class="text-amber-300 font-semibold">Klip #${bestHookSoFar.clipIndex} (${bestHookSoFar.timelineStart}) • Skor ${bestHookSoFar.hookScore}/100</span>`;
-                        }
-                    }
 
                     // Update UI Progress
                     const pct = Math.min(100, Math.round(((i + 1) / timestamps.length) * 100));
@@ -1882,12 +1293,6 @@
                     dlBtn.href = appState.processedVideoUrl;
                     dlBtn.download = "alur-cerita-anticopyright.mp4";
 
-                    const previewEl = document.getElementById("processedVideoPreview");
-                    if (previewEl) {
-                        previewEl.src = appState.processedVideoUrl;
-                        previewEl.load();
-                    }
-
                     const mbSize = Math.round(mp4Blob.size / (1024 * 1024));
                     document.getElementById("clipSummaryBadge").textContent = `${appState.extractedFrames.length} Klip • Durasi: ${formatTime(totalSecondsRecorded)} (${mbSize} MB MP4 Normal Speed)`;
                     document.getElementById("processedVideoResult").classList.remove("hidden");
@@ -1903,12 +1308,6 @@
                             dlBtn.href = appState.processedVideoUrl;
                             dlBtn.download = `alur-cerita-anticopyright.${fallbackExt}`;
 
-                            const previewEl = document.getElementById("processedVideoPreview");
-                            if (previewEl) {
-                                previewEl.src = appState.processedVideoUrl;
-                                previewEl.load();
-                            }
-
                             const mbSize = Math.round(blob.size / (1024 * 1024));
                             document.getElementById("clipSummaryBadge").textContent = `${appState.extractedFrames.length} Klip • Durasi: ${formatTime(totalSecondsRecorded)} (${mbSize} MB)`;
                             document.getElementById("processedVideoResult").classList.remove("hidden");
@@ -1919,9 +1318,6 @@
                 }
 
                 // Tampilkan Strip Visual di UI untuk dibaca AI Vision
-                if (optHookDetector) {
-                    finalizeHookAnalytics();
-                }
                 renderFramesPreviewStrip();
 
                 // Update Status UI ke Langkah 2 & Aktifkan Tombol Generate Naskah
@@ -1962,134 +1358,6 @@
             }
         }
 
-        // ==========================================
-        // ENGINE ANALITIK & PENDETEKSI HOOK VIDEO
-        // ==========================================
-        function sampleHookMetrics(vid, hCtx, prevLumaArr) {
-            hCtx.drawImage(vid, 0, 0, 64, 36);
-            const data = hCtx.getImageData(0, 0, 64, 36).data;
-            const pixelCount = 64 * 36;
-            const lumaArr = new Float32Array(pixelCount);
-            let sumLuma = 0;
-            let sumSat = 0;
-            let motionDiffSum = 0;
-
-            for (let p = 0, idx = 0; p < data.length; p += 4, idx++) {
-                const r = data[p], g = data[p + 1], b = data[p + 2];
-                const luma = 0.299 * r + 0.587 * g + 0.114 * b;
-                lumaArr[idx] = luma;
-                sumLuma += luma;
-
-                const maxC = Math.max(r, g, b);
-                const minC = Math.min(r, g, b);
-                sumSat += maxC > 0 ? ((maxC - minC) / maxC) : 0;
-
-                if (prevLumaArr) {
-                    motionDiffSum += Math.abs(luma - prevLumaArr[idx]);
-                }
-            }
-
-            const avgLuma = sumLuma / pixelCount;
-            let variance = 0;
-            for (let idx = 0; idx < pixelCount; idx++) {
-                const d = lumaArr[idx] - avgLuma;
-                variance += d * d;
-            }
-            const contrastStd = Math.sqrt(variance / pixelCount);
-            const avgSat = (sumSat / pixelCount) * 100;
-            const motionAvg = prevLumaArr ? (motionDiffSum / pixelCount) : 0;
-
-            return { lumaArr, avgLuma, contrastStd, avgSat, motionAvg };
-        }
-
-        function finalizeHookAnalytics() {
-            const frames = appState.extractedFrames || [];
-            if (frames.length === 0) return;
-
-            const scored = frames.filter(f => typeof f.hookScore === "number");
-            if (scored.length === 0) return;
-
-            const sortedByHook = [...scored].sort((a, b) => b.hookScore - a.hookScore);
-            const topHooks = sortedByHook.slice(0, 3);
-            const openingClip = scored[0];
-            const openingScore = openingClip.hookScore;
-
-            const topAvg = topHooks.reduce((acc, f) => acc + f.hookScore, 0) / topHooks.length;
-            const overallScore = Math.min(99, Math.round(openingScore * 0.4 + topAvg * 0.6));
-
-            let gradeLabel = "Cukup Baik";
-            let badgeClass = "text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20";
-            if (overallScore >= 78) {
-                gradeLabel = `Skor ${overallScore}/100 • Viral Ready`;
-                badgeClass = "text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
-            } else if (overallScore >= 60) {
-                gradeLabel = `Skor ${overallScore}/100 • Potensi Bagus`;
-            } else {
-                gradeLabel = `Skor ${overallScore}/100 • Perlu Hook Kuat`;
-                badgeClass = "text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30";
-            }
-
-            const top1 = topHooks[0];
-            let recommendation = "";
-            if (openingScore >= 72) {
-                recommendation = `✅ <strong>Hook Pembuka (00:00) Kuat (${openingScore}/100):</strong> Klip #1 sudah memiliki dinamika visual tinggi (${openingClip.hookTag}) yang efektif menahan penonton di 5 detik pertama.`;
-            } else {
-                recommendation = `💡 <strong>Saran Retensi (Opening Skor ${openingScore}/100):</strong> Klip #1 cenderung tenang. Gunakan kalimat hook narasi yang ekstrem di awal, atau pasang <strong>Klip #${top1.clipIndex} (${top1.timelineStart} • Skor ${top1.hookScore})</strong> sebagai cuplikan teaser 3 detik di awal CapCut!`;
-            }
-
-            appState.hookAnalytics = {
-                overallScore,
-                openingScore,
-                topHooks: topHooks.map(h => ({
-                    clipIndex: h.clipIndex,
-                    timelineStart: h.timelineStart,
-                    timelineEnd: h.timelineEnd,
-                    timeFormatted: h.timeFormatted,
-                    hookScore: h.hookScore,
-                    hookTag: h.hookTag
-                })),
-                recommendation
-            };
-
-            const suggestedHookTitles = refreshHookTitleSuggestions(false);
-
-            const hookLiveMeter = document.getElementById("hookLiveMeter");
-            const hookFinalSummary = document.getElementById("hookFinalSummary");
-            const hookOverallBadge = document.getElementById("hookOverallBadge");
-            const hookOpeningEval = document.getElementById("hookOpeningEval");
-            const hookTopList = document.getElementById("hookTopList");
-
-            if (hookLiveMeter) hookLiveMeter.classList.add("hidden");
-            if (hookFinalSummary) hookFinalSummary.classList.remove("hidden");
-            if (hookOverallBadge) {
-                hookOverallBadge.textContent = gradeLabel;
-                hookOverallBadge.className = badgeClass;
-            }
-            if (hookOpeningEval) {
-                const bestTitle = suggestedHookTitles[0] || "";
-                hookOpeningEval.innerHTML = `${recommendation}<div class="mt-2 pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2"><span class="text-amber-300 font-semibold truncate">✨ Saran Judul (${appState.aspectRatio}): ${bestTitle}</span><button type="button" onclick="copySingleText('${bestTitle.replace(/'/g, "\\'")}')" class="shrink-0 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-[10px] font-bold border border-amber-500/30">Copy</button></div>`;
-            }
-
-            if (hookTopList) {
-                hookTopList.innerHTML = "";
-                topHooks.forEach((h, idx) => {
-                    const row = document.createElement("div");
-                    row.className = "flex items-center gap-2.5 p-2 rounded-lg bg-studio-950 border border-zinc-800/90 text-[11px]";
-                    row.innerHTML = `
-                        <img src="${h.dataUrl}" alt="Hook ${idx + 1}" class="w-14 h-8 object-cover rounded border border-zinc-700 shrink-0">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="font-bold text-white truncate">#${idx + 1} • Klip #${h.clipIndex} (${h.timelineStart} - ${h.timelineEnd})</span>
-                                <span class="font-mono font-bold text-amber-400 shrink-0">${h.hookScore}/100</span>
-                            </div>
-                            <div class="text-[10px] text-zinc-400 truncate">${h.hookTag} • Film Asli: ${h.timeFormatted}</div>
-                        </div>
-                    `;
-                    hookTopList.appendChild(row);
-                });
-            }
-        }
-
         function renderFramesPreviewStrip() {
             const panel = document.getElementById("framesPreviewPanel");
             const strip = document.getElementById("framesStrip");
@@ -2099,17 +1367,11 @@
             countTag.textContent = `${appState.extractedFrames.length} Potongan Adegan (Visual-Sync CapCut)`;
             strip.innerHTML = "";
 
-            const topHookIndices = new Set(
-                (appState.hookAnalytics?.topHooks || []).map(h => h.clipIndex)
-            );
-
             appState.extractedFrames.forEach((frame, idx) => {
-                const isTopHook = topHookIndices.has(frame.clipIndex);
                 const card = document.createElement("div");
-                card.className = `relative rounded-lg overflow-hidden border ${isTopHook ? 'border-amber-500/70 ring-1 ring-amber-500/30' : 'border-zinc-800'} bg-black group aspect-video`;
+                card.className = "relative rounded-lg overflow-hidden border border-zinc-800 bg-black group aspect-video";
                 card.innerHTML = `
                     <img src="${frame.dataUrl}" alt="Adegan ${idx + 1}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                    ${isTopHook ? `<span class="absolute top-1 right-1 bg-amber-500/95 text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded shadow">🔥 Hook ${frame.hookScore}</span>` : ''}
                     <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-1.5 py-1 flex items-center justify-between text-[10px]">
                         <span class="font-bold text-indigo-300">#${idx + 1} (${frame.clipDurationSec || 12}s)</span>
                         <span class="text-zinc-300 font-mono">${frame.timelineStart || frame.timeFormatted}</span>
@@ -2307,12 +1569,8 @@
             // Panduan rincian setiap klip potongan video nyata
             const totalClips = appState.extractedFrames.length;
             const clipListGuide = appState.extractedFrames.map(f => 
-                `• Klip #${f.clipIndex} [Timeline: ${f.timelineStart} - ${f.timelineEnd} (${f.clipDurationSec}s)]: Target narasi klip ini ~${f.targetWords} kata.${f.hookScore ? ` (Skor Hook: ${f.hookScore}/100 - ${f.hookTag})` : ""} (Adegan asli: ${f.timeFormatted})`
+                `• Klip #${f.clipIndex} [Timeline: ${f.timelineStart} - ${f.timelineEnd} (${f.clipDurationSec}s)]: Target narasi klip ini ~${f.targetWords} kata. (Adegan asli: ${f.timeFormatted})`
             ).join("\n");
-
-            const hookInsightPrompt = appState.hookAnalytics
-                ? `\nANALITIK HOOK VIDEO TERDETEKSI:\n- Skor Hook Keseluruhan: ${appState.hookAnalytics.overallScore}/100 (Opening Klip #1: ${appState.hookAnalytics.openingScore}/100).\n- Momen Hook Terkuat: ${appState.hookAnalytics.topHooks.map(h => `Klip #${h.clipIndex} (${h.timelineStart}, skor ${h.hookScore}/100 - ${h.hookTag})`).join(", ")}.\n- INSTRUKSI HOOK: Pastikan narasi pada [Klip 1] menggunakan kalimat pembuka (opening hook) yang sangat memancing rasa penasaran, dan berikan penekanan dramatis pada klip dengan Skor Hook tertinggi!`
-                : "";
 
             // Ambil sampel frame visual yang proporsional
             let selectedFrames = appState.extractedFrames;
@@ -2361,7 +1619,7 @@ ATURAN SANGAT KETAT AGAR 100% SINKRON:
 3. Jumlah kata per klip HARUS SANGAT PRESISI mendekati target kata (kecepatan narator rata-rata 2.2 kata per detik, misal klip 12 detik = ~26 kata, klip 20 detik = ~44 kata). JANGAN menulis terlalu panjang atau terlalu pendek, agar durasi suara TTS klip tersebut SELESAI TEPAT BERSAMAAN dengan berakhirnya klip video di CapCut!
 4. Target total kata naskah: ${targetWordsMin} sampai ${targetWordsMax} kata (${targetWordDesc} untuk ${targetMinutes} menit).
 5. Gaya bahasa: ${styleDescriptions[styleValue]}
-${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsightPrompt}
+${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}
 6. Bahasa Indonesia natural, ekspresif, memikat penonton, TANPA emoji, bullet points, atau simbol aneh di dalam kalimat narasi.`
                     }
                 ];
@@ -2388,11 +1646,6 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                                 fullNarrationScript: {
                                     type: "STRING",
                                     description: "Naskah lengkap terstruktur per klip dengan penanda [Klip X • MM:SS - MM:SS] sebelum setiap paragraf narasi."
-                                },
-                                suggestedViralTitles: {
-                                    type: "ARRAY",
-                                    description: "3 saran judul viral yang sangat memancing klik sesuai isi cerita film, hasil deteksi hook, dan rasio platform (" + (appState.aspectRatio === "9:16" ? "TikTok/Shorts 9:16 singkat padat" : "YouTube 16:9") + ").",
-                                    items: { type: "STRING" }
                                 },
                                 sceneAlignments: {
                                     type: "ARRAY",
@@ -2472,7 +1725,6 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
 
                 let fullScript = "";
                 let breakdowns = [];
-                let viralTitles = [];
 
                 try {
                     let cleanText = rawJson.trim();
@@ -2484,7 +1736,6 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                     const parsed = JSON.parse(cleanText);
                     fullScript = parsed.fullNarrationScript || "";
                     breakdowns = parsed.sceneAlignments || [];
-                    viralTitles = parsed.suggestedViralTitles || [];
                 } catch (parseErr) {
                     console.warn("JSON parse fallback. Mengambil teks naskah langsung:", parseErr);
                     fullScript = rawJson.replace(/```(json)?/g, "").trim();
@@ -2506,7 +1757,6 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                 scriptArea.value = appState.generatedScriptText;
                 updateWordCount();
                 renderSceneBreakdowns();
-                renderViralTitles(viralTitles);
 
                 setActiveStep(3);
                 updateStatusBadge("Naskah Lengkap Siap • Lanjut TTS", "emerald");
@@ -2525,37 +1775,6 @@ ${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsight
                 genBtn.disabled = false;
                 scriptAbortController = null;
             }
-        }
-
-        function renderViralTitles(titles) {
-            const box = document.getElementById("viralTitlesBox");
-            const list = document.getElementById("viralTitlesList");
-            const badge = document.getElementById("viralTitlesPlatformBadge");
-            if (!box || !list) return;
-
-            const finalTitles = (titles && titles.length > 0)
-                ? titles
-                : buildHookTitleSuggestions(appState.hookAnalytics, appState.aspectRatio, document.getElementById("extraContextInput")?.value || "");
-
-            if (badge) {
-                badge.textContent = appState.aspectRatio === "9:16" ? "TikTok / Shorts (9:16)" : "YouTube (16:9)";
-            }
-
-            box.classList.remove("hidden");
-            list.innerHTML = "";
-            finalTitles.forEach((t, idx) => {
-                const row = document.createElement("div");
-                row.className = "flex items-center justify-between gap-2 p-2 rounded-lg bg-zinc-900/90 border border-zinc-800/80";
-                const safeArg = t.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-                row.innerHTML = `
-                    <span class="text-zinc-100 font-medium truncate"><span class="text-amber-400 font-bold mr-1">#${idx + 1}</span> ${t}</span>
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        <button type="button" onclick="applySuggestedTitle('${safeArg}')" class="px-2 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-semibold border border-indigo-500/30">Pakai</button>
-                        <button type="button" onclick="copySingleText('${safeArg}')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-semibold border border-zinc-700">Copy</button>
-                    </div>
-                `;
-                list.appendChild(row);
-            });
         }
 
         function renderSceneBreakdowns() {
