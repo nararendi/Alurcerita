@@ -314,13 +314,13 @@
                                 <div id="templateTitleWrap" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2">
                                     <div class="flex items-center justify-between gap-2">
                                         <label for="templateTitleInput" class="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
-                                            <i class="fa-solid fa-heading"></i> Judul di Template (Auto Hook):
+                                            <i class="fa-solid fa-heading"></i> Judul di Bawah "ALUR CERITA FILM" (Bisa Diubah):
                                         </label>
                                         <button type="button" onclick="refreshHookTitleSuggestions(true)" class="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-semibold transition flex items-center gap-1">
                                             <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Saran Hook
                                         </button>
                                     </div>
-                                    <input type="text" id="templateTitleInput" placeholder="Otomatis terisi judul menarik dari deteksi hook..." class="w-full bg-studio-950 border border-zinc-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition">
+                                    <input type="text" id="templateTitleInput" oninput="syncQuickRetitleInput(this.value)" placeholder="Ketik atau pilih judul di bawah tulisan ALUR CERITA FILM..." class="w-full bg-studio-950 border border-zinc-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition">
                                     <div id="hookTitleSuggestions" class="flex flex-wrap gap-1.5"></div>
                                 </div>
                             </div>
@@ -393,6 +393,15 @@
 
                                 <div class="rounded-xl overflow-hidden bg-black border border-zinc-800 shadow-lg">
                                     <video id="processedVideoPreview" controls playsinline class="w-full max-h-[420px] object-contain mx-auto bg-black"></video>
+                                </div>
+
+                                <!-- Ubah Judul Cepat Langsung dari Preview -->
+                                <div class="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                                    <input type="text" id="quickRetitleInput" placeholder="Ganti judul di bawah 'ALUR CERITA FILM' lalu klik Terapkan..." class="flex-1 bg-studio-950 border border-zinc-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition">
+                                    <button type="button" onclick="applyQuickRetitleAndRender()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition shrink-0">
+                                        <i class="fa-solid fa-rotate"></i>
+                                        <span>Ganti Judul & Update Preview</span>
+                                    </button>
                                 </div>
 
                                 <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
@@ -1019,6 +1028,7 @@
 
             if (input && (autoFillInput || !input.value.trim())) {
                 input.value = suggestions[0];
+                syncQuickRetitleInput(suggestions[0]);
             }
 
             if (container) {
@@ -1039,8 +1049,29 @@
             const input = document.getElementById("templateTitleInput");
             if (input) {
                 input.value = title;
+                syncQuickRetitleInput(title);
                 showToast("Judul template diperbarui!", "success");
             }
+        }
+
+        function syncQuickRetitleInput(val) {
+            const quickEl = document.getElementById("quickRetitleInput");
+            if (quickEl && quickEl.value !== val) {
+                quickEl.value = val;
+            }
+        }
+
+        function applyQuickRetitleAndRender() {
+            const quickEl = document.getElementById("quickRetitleInput");
+            const topEl = document.getElementById("templateTitleInput");
+            const newTitle = quickEl ? quickEl.value.trim() : "";
+            if (!newTitle) {
+                showToast("Ketik dulu judul barunya sebelum klik Terapkan!", "warning");
+                return;
+            }
+            if (topEl) topEl.value = newTitle;
+            showToast("Merender ulang video dengan judul baru...", "info");
+            startAntiCopyrightProcess();
         }
 
         function copySingleText(text) {
@@ -1173,16 +1204,6 @@
                     ctx.shadowBlur = 8;
                     drawWrappedText(ctx, cleanTitle.toUpperCase(), targetW / 2, fgY - 66, targetW - 44, 24, 3);
                     ctx.shadowBlur = 0;
-
-                    // Footer Badge & Progress Bar
-                    const footY = fgY + fgH + 34;
-                    ctx.fillStyle = "rgba(24, 24, 31, 0.85)";
-                    ctx.beginPath();
-                    ctx.roundRect ? ctx.roundRect(targetW / 2 - 95, footY, 190, 26, 13) : ctx.fillRect(targetW / 2 - 95, footY, 190, 26);
-                    ctx.fill();
-                    ctx.fillStyle = "#fcd34d";
-                    ctx.font = "700 11px Inter, sans-serif";
-                    ctx.fillText(`KLIP #${clipIndex}/${totalClips} • LANJUT NONTON`, targetW / 2, footY + 17);
                 } else {
                     // 16:9 YouTube Viral Hook Top Bar (elegan & tidak menutupi wajah tengah)
                     const grad = ctx.createLinearGradient(0, 0, 0, 56);
@@ -1220,10 +1241,6 @@
                     ctx.fillStyle = "#ffffff";
                     ctx.font = "800 18px Inter, sans-serif";
                     drawWrappedText(ctx, cleanTitle.toUpperCase(), targetW / 2, fgY - 68, targetW - 44, 24, 3);
-
-                    ctx.fillStyle = "#a1a1aa";
-                    ctx.font = "600 12px Inter, sans-serif";
-                    ctx.fillText(`BAGIAN #${clipIndex} • ALUR CERITA LENGKAP`, targetW / 2, fgY + fgH + 46);
                 } else {
                     // 16:9 Letterbox Cinema Gold
                     ctx.fillStyle = "#050507";
@@ -1239,10 +1256,6 @@
                     ctx.textAlign = "center";
                     const shortTitle = cleanTitle.length > 62 ? cleanTitle.slice(0, 59) + "..." : cleanTitle;
                     ctx.fillText(shortTitle.toUpperCase(), targetW / 2, 24);
-
-                    ctx.fillStyle = "#d4d4d8";
-                    ctx.font = "600 10px Inter, sans-serif";
-                    ctx.fillText(`SPOILER ALERT • ALUR CERITA FILM • KLIP #${clipIndex}/${totalClips}`, targetW / 2, targetH - 9);
                 }
             }
 
