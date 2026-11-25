@@ -264,6 +264,13 @@
                                     </span>
                                     <input type="checkbox" id="optZoom" checked class="accent-indigo-500 w-4 h-4 rounded">
                                 </label>
+                                <label class="flex items-center justify-between cursor-pointer bg-zinc-900/80 p-2.5 rounded-lg border border-amber-500/20">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fa-solid fa-fire text-amber-400"></i>
+                                        <span>Pendeteksi Hook Video & Analitik Retensi (Live Score)</span>
+                                    </span>
+                                    <input type="checkbox" id="optHookDetector" checked class="accent-amber-500 w-4 h-4 rounded">
+                                </label>
                             </div>
 
                             <!-- Tombol Proses Video & Ekstrak Frame -->
@@ -298,6 +305,43 @@
                                     <i class="fa-solid fa-file-video text-sm"></i>
                                     <span>Download Video Hasil Potongan (MP4 Siap CapCut)</span>
                                 </a>
+                            </div>
+
+                            <!-- Panel Analitik Hook Video (Live saat proses & Ringkasan Akhir) -->
+                            <div id="hookAnalyticsBox" class="hidden mt-4 pt-3 border-t border-zinc-800/90 flex flex-col gap-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-fire-flame-curved"></i> Analitik Hook Video
+                                    </span>
+                                    <span id="hookOverallBadge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                        Menganalisis...
+                                    </span>
+                                </div>
+
+                                <!-- Live Meter saat proses berjalan -->
+                                <div id="hookLiveMeter" class="p-2.5 rounded-xl bg-studio-950 border border-zinc-800/80 text-[11px] space-y-1.5">
+                                    <div class="flex items-center justify-between text-zinc-300">
+                                        <span id="hookLiveClipLabel">Memindai intensitas visual Klip #1...</span>
+                                        <span id="hookLiveScoreText" class="font-mono font-bold text-amber-400">0/100</span>
+                                    </div>
+                                    <div class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                                        <div id="hookLiveBar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-all duration-200" style="width: 0%"></div>
+                                    </div>
+                                    <div id="hookLiveBestSoFar" class="text-[10px] text-zinc-400">
+                                        Kandidat Hook Terkuat: <span class="text-zinc-200 font-semibold">-</span>
+                                    </div>
+                                </div>
+
+                                <!-- Hasil Akhir Top Hook & Evaluasi Opening (tampil setelah selesai) -->
+                                <div id="hookFinalSummary" class="hidden space-y-2.5">
+                                    <div id="hookOpeningEval" class="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-[11px] text-zinc-300 leading-relaxed"></div>
+                                    <div>
+                                        <div class="text-[11px] font-semibold text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-trophy text-amber-400"></i> Top 3 Momen Hook Terbaik (Rekomendasi Teaser / Thumbnail):
+                                        </div>
+                                        <div id="hookTopList" class="space-y-1.5"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -533,6 +577,7 @@
             extractedFrames: [],
             processedVideoUrl: null,
             processedVideoDuration: 0,
+            hookAnalytics: null,
             generatedScriptText: "",
             sceneBreakdowns: [],
             audioBlobUrl: null,
@@ -772,6 +817,7 @@
                 extractedFrames: [],
                 processedVideoUrl: null,
                 processedVideoDuration: 0,
+                hookAnalytics: null,
                 generatedScriptText: "",
                 sceneBreakdowns: [],
                 audioBlobUrl: null
@@ -783,6 +829,10 @@
             document.getElementById("resetBtn").classList.add("hidden");
             document.getElementById("framesPreviewPanel").classList.add("hidden");
             document.getElementById("processedVideoResult").classList.add("hidden");
+            const hookBox = document.getElementById("hookAnalyticsBox");
+            if (hookBox) hookBox.classList.add("hidden");
+            const hookFinal = document.getElementById("hookFinalSummary");
+            if (hookFinal) hookFinal.classList.add("hidden");
             document.getElementById("sceneBreakdownBox").classList.add("hidden");
             document.getElementById("audioResultBox").classList.add("hidden");
             document.getElementById("scriptOutput").value = "";
@@ -1021,6 +1071,41 @@
             const optCleanCut = document.getElementById("optCleanCut") ? document.getElementById("optCleanCut").checked : true;
             const optColorFilter = document.getElementById("optColorFilter") ? document.getElementById("optColorFilter").checked : true;
             const optZoom = document.getElementById("optZoom") ? document.getElementById("optZoom").checked : true;
+            const optHookDetector = document.getElementById("optHookDetector") ? document.getElementById("optHookDetector").checked : true;
+
+            // Setup Hook Detector Canvas (64x36 ultra-ringan agar tidak memperlambat render video)
+            const hookCanvas = document.createElement("canvas");
+            hookCanvas.width = 64;
+            hookCanvas.height = 36;
+            const hookCtx = hookCanvas.getContext("2d", { willReadFrequently: true });
+            appState.hookAnalytics = null;
+
+            const hookBox = document.getElementById("hookAnalyticsBox");
+            const hookLiveMeter = document.getElementById("hookLiveMeter");
+            const hookFinalSummary = document.getElementById("hookFinalSummary");
+            const hookOverallBadge = document.getElementById("hookOverallBadge");
+            const hookLiveClipLabel = document.getElementById("hookLiveClipLabel");
+            const hookLiveScoreText = document.getElementById("hookLiveScoreText");
+            const hookLiveBar = document.getElementById("hookLiveBar");
+            const hookLiveBestSoFar = document.getElementById("hookLiveBestSoFar");
+
+            if (optHookDetector && hookBox) {
+                hookBox.classList.remove("hidden");
+                if (hookLiveMeter) hookLiveMeter.classList.remove("hidden");
+                if (hookFinalSummary) hookFinalSummary.classList.add("hidden");
+                if (hookOverallBadge) {
+                    hookOverallBadge.textContent = "Live Scanning...";
+                    hookOverallBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 animate-pulse";
+                }
+                if (hookLiveClipLabel) hookLiveClipLabel.textContent = "Memulai pemindaian hook visual...";
+                if (hookLiveScoreText) hookLiveScoreText.textContent = "0/100";
+                if (hookLiveBar) hookLiveBar.style.width = "0%";
+                if (hookLiveBestSoFar) hookLiveBestSoFar.innerHTML = `Kandidat Hook Terkuat: <span class="text-zinc-200 font-semibold">-</span>`;
+            } else if (hookBox) {
+                hookBox.classList.add("hidden");
+            }
+
+            let bestHookSoFar = { clipIndex: 0, hookScore: 0, timelineStart: "00:00", hookTag: "" };
 
             const targetMinutes = parseInt(document.getElementById("targetDurationSelect")?.value) || 20;
             let targetTotalSeconds = targetMinutes * 60; // 180s (3m), 600s (10m), 900s (15m), 1200s (20m)
@@ -1211,6 +1296,14 @@
                     const minSampleInterval = 0.038; // ~25 fps sampling interval
                     let lastEncodedUs = currentTimestampUs;
 
+                    // Variabel analitik hook per klip
+                    let prevHookLuma = null;
+                    let lastHookSampleTime = startTime - 1.0;
+                    const hookMotionSamples = [];
+                    const hookContrastSamples = [];
+                    const hookLumaSamples = [];
+                    const hookSatSamples = [];
+
                     while (!hiddenVid.ended && hiddenVid.currentTime < clipEndTime && !appState.stopRequested) {
                         if (encoderError) throw encoderError;
 
@@ -1219,6 +1312,17 @@
                         }
 
                         await waitForNextVideoFrame(hiddenVid);
+
+                        // Sampling analitik hook setiap ~0.5 detik selama klip diputar
+                        if (optHookDetector && (hiddenVid.currentTime - lastHookSampleTime >= 0.5)) {
+                            lastHookSampleTime = hiddenVid.currentTime;
+                            const m = sampleHookMetrics(hiddenVid, hookCtx, prevHookLuma);
+                            prevHookLuma = m.lumaArr;
+                            hookContrastSamples.push(m.contrastStd);
+                            hookLumaSamples.push(m.avgLuma);
+                            hookSatSamples.push(m.avgSat);
+                            if (m.motionAvg > 0) hookMotionSamples.push(m.motionAvg);
+                        }
 
                         // Pastikan frame dicatat sesuai pergerakan waktu video asli (1.0x Realtime Sync)
                         if (hiddenVid.currentTime - lastSampledTime >= minSampleInterval) {
@@ -1267,6 +1371,53 @@
                     try {
                         hiddenVid.pause();
                     } catch (e) {}
+
+                    // Hitung & tampilkan Live Hook Score untuk klip yang baru selesai dipotong
+                    if (optHookDetector && appState.extractedFrames[i]) {
+                        const avgMotion = hookMotionSamples.length > 0
+                            ? hookMotionSamples.reduce((a, b) => a + b, 0) / hookMotionSamples.length
+                            : 5;
+                        const avgContrast = hookContrastSamples.length > 0
+                            ? hookContrastSamples.reduce((a, b) => a + b, 0) / hookContrastSamples.length
+                            : 35;
+                        const avgLuma = hookLumaSamples.length > 0
+                            ? hookLumaSamples.reduce((a, b) => a + b, 0) / hookLumaSamples.length
+                            : 100;
+                        const avgSat = hookSatSamples.length > 0
+                            ? hookSatSamples.reduce((a, b) => a + b, 0) / hookSatSamples.length
+                            : 25;
+
+                        const motionPts = Math.min(50, (avgMotion / 20) * 50);
+                        const contrastPts = Math.min(30, (avgContrast / 60) * 30);
+                        const lightingBonus = (avgLuma >= 35 && avgLuma <= 215) ? 12 : 5;
+                        const satBonus = Math.min(8, (avgSat / 45) * 8);
+                        const hookScore = Math.min(99, Math.max(28, Math.round(motionPts + contrastPts + lightingBonus + satBonus)));
+
+                        let hookTag = "Adegan Cerita Stabil";
+                        if (avgMotion >= 13) hookTag = "Aksi Cepat & Dinamis";
+                        else if (avgContrast >= 50) hookTag = "Visual Kontras Dramatis";
+                        else if (avgSat >= 35) hookTag = "Warna Sinematik Mencolok";
+
+                        appState.extractedFrames[i].hookScore = hookScore;
+                        appState.extractedFrames[i].hookTag = hookTag;
+                        appState.extractedFrames[i].motionLevel = Math.round(avgMotion * 10) / 10;
+
+                        if (hookScore > bestHookSoFar.hookScore) {
+                            bestHookSoFar = {
+                                clipIndex: i + 1,
+                                hookScore,
+                                timelineStart,
+                                hookTag
+                            };
+                        }
+
+                        if (hookLiveClipLabel) hookLiveClipLabel.textContent = `Klip #${i + 1} (${timelineStart}) • ${hookTag}`;
+                        if (hookLiveScoreText) hookLiveScoreText.textContent = `${hookScore}/100`;
+                        if (hookLiveBar) hookLiveBar.style.width = `${hookScore}%`;
+                        if (hookLiveBestSoFar && bestHookSoFar.clipIndex > 0) {
+                            hookLiveBestSoFar.innerHTML = `Kandidat Hook Terkuat: <span class="text-amber-300 font-semibold">Klip #${bestHookSoFar.clipIndex} (${bestHookSoFar.timelineStart}) • Skor ${bestHookSoFar.hookScore}/100</span>`;
+                        }
+                    }
 
                     // Update UI Progress
                     const pct = Math.min(100, Math.round(((i + 1) / timestamps.length) * 100));
@@ -1318,6 +1469,9 @@
                 }
 
                 // Tampilkan Strip Visual di UI untuk dibaca AI Vision
+                if (optHookDetector) {
+                    finalizeHookAnalytics();
+                }
                 renderFramesPreviewStrip();
 
                 // Update Status UI ke Langkah 2 & Aktifkan Tombol Generate Naskah
@@ -1358,6 +1512,129 @@
             }
         }
 
+        // ==========================================
+        // ENGINE ANALITIK & PENDETEKSI HOOK VIDEO
+        // ==========================================
+        function sampleHookMetrics(vid, hCtx, prevLumaArr) {
+            hCtx.drawImage(vid, 0, 0, 64, 36);
+            const data = hCtx.getImageData(0, 0, 64, 36).data;
+            const pixelCount = 64 * 36;
+            const lumaArr = new Float32Array(pixelCount);
+            let sumLuma = 0;
+            let sumSat = 0;
+            let motionDiffSum = 0;
+
+            for (let p = 0, idx = 0; p < data.length; p += 4, idx++) {
+                const r = data[p], g = data[p + 1], b = data[p + 2];
+                const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+                lumaArr[idx] = luma;
+                sumLuma += luma;
+
+                const maxC = Math.max(r, g, b);
+                const minC = Math.min(r, g, b);
+                sumSat += maxC > 0 ? ((maxC - minC) / maxC) : 0;
+
+                if (prevLumaArr) {
+                    motionDiffSum += Math.abs(luma - prevLumaArr[idx]);
+                }
+            }
+
+            const avgLuma = sumLuma / pixelCount;
+            let variance = 0;
+            for (let idx = 0; idx < pixelCount; idx++) {
+                const d = lumaArr[idx] - avgLuma;
+                variance += d * d;
+            }
+            const contrastStd = Math.sqrt(variance / pixelCount);
+            const avgSat = (sumSat / pixelCount) * 100;
+            const motionAvg = prevLumaArr ? (motionDiffSum / pixelCount) : 0;
+
+            return { lumaArr, avgLuma, contrastStd, avgSat, motionAvg };
+        }
+
+        function finalizeHookAnalytics() {
+            const frames = appState.extractedFrames || [];
+            if (frames.length === 0) return;
+
+            const scored = frames.filter(f => typeof f.hookScore === "number");
+            if (scored.length === 0) return;
+
+            const sortedByHook = [...scored].sort((a, b) => b.hookScore - a.hookScore);
+            const topHooks = sortedByHook.slice(0, 3);
+            const openingClip = scored[0];
+            const openingScore = openingClip.hookScore;
+
+            const topAvg = topHooks.reduce((acc, f) => acc + f.hookScore, 0) / topHooks.length;
+            const overallScore = Math.min(99, Math.round(openingScore * 0.4 + topAvg * 0.6));
+
+            let gradeLabel = "Cukup Baik";
+            let badgeClass = "text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20";
+            if (overallScore >= 78) {
+                gradeLabel = `Skor ${overallScore}/100 • Viral Ready`;
+                badgeClass = "text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+            } else if (overallScore >= 60) {
+                gradeLabel = `Skor ${overallScore}/100 • Potensi Bagus`;
+            } else {
+                gradeLabel = `Skor ${overallScore}/100 • Perlu Hook Kuat`;
+                badgeClass = "text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30";
+            }
+
+            const top1 = topHooks[0];
+            let recommendation = "";
+            if (openingScore >= 72) {
+                recommendation = `✅ <strong>Hook Pembuka (00:00) Kuat (${openingScore}/100):</strong> Klip #1 sudah memiliki dinamika visual tinggi (${openingClip.hookTag}) yang efektif menahan penonton di 5 detik pertama.`;
+            } else {
+                recommendation = `💡 <strong>Saran Retensi (Opening Skor ${openingScore}/100):</strong> Klip #1 cenderung tenang. Gunakan kalimat hook narasi yang ekstrem di awal, atau pasang <strong>Klip #${top1.clipIndex} (${top1.timelineStart} • Skor ${top1.hookScore})</strong> sebagai cuplikan teaser 3 detik di awal CapCut!`;
+            }
+
+            appState.hookAnalytics = {
+                overallScore,
+                openingScore,
+                topHooks: topHooks.map(h => ({
+                    clipIndex: h.clipIndex,
+                    timelineStart: h.timelineStart,
+                    timelineEnd: h.timelineEnd,
+                    timeFormatted: h.timeFormatted,
+                    hookScore: h.hookScore,
+                    hookTag: h.hookTag
+                })),
+                recommendation
+            };
+
+            const hookLiveMeter = document.getElementById("hookLiveMeter");
+            const hookFinalSummary = document.getElementById("hookFinalSummary");
+            const hookOverallBadge = document.getElementById("hookOverallBadge");
+            const hookOpeningEval = document.getElementById("hookOpeningEval");
+            const hookTopList = document.getElementById("hookTopList");
+
+            if (hookLiveMeter) hookLiveMeter.classList.add("hidden");
+            if (hookFinalSummary) hookFinalSummary.classList.remove("hidden");
+            if (hookOverallBadge) {
+                hookOverallBadge.textContent = gradeLabel;
+                hookOverallBadge.className = badgeClass;
+            }
+            if (hookOpeningEval) hookOpeningEval.innerHTML = recommendation;
+
+            if (hookTopList) {
+                hookTopList.innerHTML = "";
+                topHooks.forEach((h, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "flex items-center gap-2.5 p-2 rounded-lg bg-studio-950 border border-zinc-800/90 text-[11px]";
+                    row.innerHTML = `
+                        <img src="${h.dataUrl}" alt="Hook ${idx + 1}" class="w-14 h-8 object-cover rounded border border-zinc-700 shrink-0">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-bold text-white truncate">#${idx + 1} • Klip #${h.clipIndex} (${h.timelineStart} - ${h.timelineEnd})</span>
+                                <span class="font-mono font-bold text-amber-400 shrink-0">${h.hookScore}/100</span>
+                            </div>
+                            <div class="text-[10px] text-zinc-400 truncate">${h.hookTag} • Film Asli: ${h.timeFormatted}</div>
+                        </div>
+                    `;
+                    hookTopList.appendChild(row);
+                });
+            }
+        }
+
         function renderFramesPreviewStrip() {
             const panel = document.getElementById("framesPreviewPanel");
             const strip = document.getElementById("framesStrip");
@@ -1367,11 +1644,17 @@
             countTag.textContent = `${appState.extractedFrames.length} Potongan Adegan (Visual-Sync CapCut)`;
             strip.innerHTML = "";
 
+            const topHookIndices = new Set(
+                (appState.hookAnalytics?.topHooks || []).map(h => h.clipIndex)
+            );
+
             appState.extractedFrames.forEach((frame, idx) => {
+                const isTopHook = topHookIndices.has(frame.clipIndex);
                 const card = document.createElement("div");
-                card.className = "relative rounded-lg overflow-hidden border border-zinc-800 bg-black group aspect-video";
+                card.className = `relative rounded-lg overflow-hidden border ${isTopHook ? 'border-amber-500/70 ring-1 ring-amber-500/30' : 'border-zinc-800'} bg-black group aspect-video`;
                 card.innerHTML = `
                     <img src="${frame.dataUrl}" alt="Adegan ${idx + 1}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                    ${isTopHook ? `<span class="absolute top-1 right-1 bg-amber-500/95 text-black font-extrabold text-[9px] px-1.5 py-0.5 rounded shadow">🔥 Hook ${frame.hookScore}</span>` : ''}
                     <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-1.5 py-1 flex items-center justify-between text-[10px]">
                         <span class="font-bold text-indigo-300">#${idx + 1} (${frame.clipDurationSec || 12}s)</span>
                         <span class="text-zinc-300 font-mono">${frame.timelineStart || frame.timeFormatted}</span>
@@ -1569,8 +1852,12 @@
             // Panduan rincian setiap klip potongan video nyata
             const totalClips = appState.extractedFrames.length;
             const clipListGuide = appState.extractedFrames.map(f => 
-                `• Klip #${f.clipIndex} [Timeline: ${f.timelineStart} - ${f.timelineEnd} (${f.clipDurationSec}s)]: Target narasi klip ini ~${f.targetWords} kata. (Adegan asli: ${f.timeFormatted})`
+                `• Klip #${f.clipIndex} [Timeline: ${f.timelineStart} - ${f.timelineEnd} (${f.clipDurationSec}s)]: Target narasi klip ini ~${f.targetWords} kata.${f.hookScore ? ` (Skor Hook: ${f.hookScore}/100 - ${f.hookTag})` : ""} (Adegan asli: ${f.timeFormatted})`
             ).join("\n");
+
+            const hookInsightPrompt = appState.hookAnalytics
+                ? `\nANALITIK HOOK VIDEO TERDETEKSI:\n- Skor Hook Keseluruhan: ${appState.hookAnalytics.overallScore}/100 (Opening Klip #1: ${appState.hookAnalytics.openingScore}/100).\n- Momen Hook Terkuat: ${appState.hookAnalytics.topHooks.map(h => `Klip #${h.clipIndex} (${h.timelineStart}, skor ${h.hookScore}/100 - ${h.hookTag})`).join(", ")}.\n- INSTRUKSI HOOK: Pastikan narasi pada [Klip 1] menggunakan kalimat pembuka (opening hook) yang sangat memancing rasa penasaran, dan berikan penekanan dramatis pada klip dengan Skor Hook tertinggi!`
+                : "";
 
             // Ambil sampel frame visual yang proporsional
             let selectedFrames = appState.extractedFrames;
@@ -1619,7 +1906,7 @@ ATURAN SANGAT KETAT AGAR 100% SINKRON:
 3. Jumlah kata per klip HARUS SANGAT PRESISI mendekati target kata (kecepatan narator rata-rata 2.2 kata per detik, misal klip 12 detik = ~26 kata, klip 20 detik = ~44 kata). JANGAN menulis terlalu panjang atau terlalu pendek, agar durasi suara TTS klip tersebut SELESAI TEPAT BERSAMAAN dengan berakhirnya klip video di CapCut!
 4. Target total kata naskah: ${targetWordsMin} sampai ${targetWordsMax} kata (${targetWordDesc} untuk ${targetMinutes} menit).
 5. Gaya bahasa: ${styleDescriptions[styleValue]}
-${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}
+${extraContext ? "KONTEKS FILM DARI KREATOR: " + extraContext : ""}${hookInsightPrompt}
 6. Bahasa Indonesia natural, ekspresif, memikat penonton, TANPA emoji, bullet points, atau simbol aneh di dalam kalimat narasi.`
                     }
                 ];
